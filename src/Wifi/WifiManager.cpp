@@ -15,7 +15,7 @@ WifiManager::WifiManager() {
   memcpy(&(hotspotName[7]), hashResult.result.get(), 8);
   hotspotName[15] = 0;
 
-  memcpy(hotspotPassword, hashResult.result.get(), 10);
+  memcpy(hotspotPassword, hashResult.result.get() + 8, 10);
   hotspotPassword[10] = 0;
 }
 

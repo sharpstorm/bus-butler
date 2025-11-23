@@ -11,4 +11,4 @@ void WebConfigServer::start() { server.begin(); }
 
 void WebConfigServer::stop() { server.end(); }
 
-WebConfigServer webConfigServer = WebConfigServer();
+WebConfigServer webConfigServer;
