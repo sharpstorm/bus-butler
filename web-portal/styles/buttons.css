@@ -1,0 +1,111 @@
+.btn {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+  cursor: pointer;
+  transition: background-color cubic-bezier(0, 0, 0.2, 1) 0.25s, transform 0.1s;
+}
+
+.btn:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary) 80%,
+    var(--color-base-content) 20%
+  );
+}
+
+.btn:active {
+  transform: scale(var(--btn-focus-scale, 0.95));
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary) 60%,
+    var(--color-base-content) 40%
+  );
+}
+
+.btn:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Outline Buttons */
+
+.btn-outline {
+  background-color: transparent;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-outline:hover {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.btn-outline:active {
+  transform: scale(var(--btn-focus-scale, 0.95));
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary) 80%,
+    var(--color-base-content) 20%
+  );
+}
+
+.btn-outline:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Ghost button */
+.btn-ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-base-content);
+}
+
+.btn-ghost:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--color-base-content) 10%,
+    var(--color-base-100) 90%
+  );
+}
+
+.btn-ghost:active {
+  transform: scale(var(--btn-focus-scale, 0.95));
+  background-color: color-mix(
+    in srgb,
+    var(--color-base-content) 20%,
+    var(--color-base-100) 80%
+  );
+}
+
+.btn-ghost:focus {
+  outline: 2px solid var(--color-base-content);
+  outline-offset: 2px;
+}
+
+/* Disabled state (common) */
+.btn:disabled,
+.btn.btn-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  background-color: var(--color-base-300);
+  color: var(--color-base-content);
+  border-color: transparent;
+}
+
+/* Color variants */
+.btn.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+.btn.btn-primary.btn-outline {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.btn.btn-primary.btn-ghost {
+  color: var(--color-primary);
+}
