@@ -3,5 +3,6 @@
     "files.associations": {
         "cstddef": "cpp",
         "new": "cpp"
-    }
+    },
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, indentWidth: 2 }"
 }
