@@ -6,8 +6,12 @@
 #include <AsyncTCP.h>
 #include <WiFi.h>
 
+#include "ArduinoJson.h"
+
 // Web Server
 #include <EspAsyncWebServer.h>
+
+#include "AsyncJson.h"
 
 using namespace std;
 

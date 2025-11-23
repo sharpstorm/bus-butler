@@ -1,9 +1,12 @@
+import { SetupState } from './setup-state'
+import { setAppState } from './state'
+
+let setupState: SetupState | undefined
+
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    const element = document.getElementById('test-element');
-    if (!element) {
-      return;
-    }
-    element.textContent = 'JS Loaded';
-  }, 2000);
-});
+  setupState = new SetupState()
+  setupState.onWorkflowComplete(() => {
+    setAppState('config')
+  })
+  setAppState('setup')
+})

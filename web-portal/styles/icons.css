@@ -1,0 +1,15 @@
+.icon-check-rounded {
+  background: transparent
+    url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBzdHlsZT0idHJhbnNmb3JtOiA7bXNGaWx0ZXI6OyI+PHBhdGggZD0iTTEyIDJDNi40ODYgMiAyIDYuNDg2IDIgMTJzNC40ODYgMTAgMTAgMTAgMTAtNC40ODYgMTAtMTBTMTcuNTE0IDIgMTIgMnptLTEuOTk5IDE0LjQxMy0zLjcxMy0zLjcwNUw3LjcgMTEuMjkybDIuMjk5IDIuMjk1IDUuMjk0LTUuMjk0IDEuNDE0IDEuNDE0LTYuNzA2IDYuNzA2eiI+PC9wYXRoPjwvc3ZnPg==')
+    no-repeat center center;
+}
+
+.icon-16 {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-24 {
+  width: 24px;
+  height: 24px;
+}

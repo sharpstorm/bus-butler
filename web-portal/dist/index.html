@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles/shadow.css">
   <title>Bus Butler Config</title>
   <script type="module" crossorigin src="./index.js"></script>
   <link rel="stylesheet" crossorigin href="./index.css">
@@ -14,24 +15,68 @@
     <a class="navbar-brand">Bus Butler</a>
     <a class="navbar-link">Config</a>
   </div>
-  <div id="state-setup" class="hero">
-    <div class="hero-content">
+  <div id="state-loading" class="app-state">
+    <div class="loading-container">
+      <div class="lds-ripple">
+        <div></div>
+        <div></div>
+      </div>
+      <h2>Loading</h2>
+    </div>
+  </div>
+  <div id="state-setup" class="hero hidden app-state">
+    <div id="setup-screen-1" class="setup-screen hero-content hidden">
       <h1 class="hero-title">Hey! &#128075;</h1>
       <p class="hero-subtitle">
         Let's get you set up
       </p>
       <p>You'll need to add a few configuration options.</p>
       <div class="hero-action">
-        <buttton class="btn">Start</buttton>
+        <buttton class="btn" id="setup-screen-1-continue-btn">Start</buttton>
       </div>
-
+    </div>
+    <div id="setup-screen-2" class="setup-screen hero-content hidden">
+      <h1 class="hero-title">WiFi Configuration</h1>
+      <p class="hero-subtitle">
+        Which network should I connect to?
+      </p>
+      <div class="w-full m-auto flex flex-col gap-6" style="max-width: 576px;">
+        <div id="setup-screen-2-wifi-list" class="list no-scrollbar w-full"
+          style="max-height: 768px; overflow-y: scroll;">
+          <a class="list-row" tabindex="0">
+            wifi 1
+          </a>
+          <a class="list-row selected" tabindex="0">
+            wifi 2
+          </a>
+        </div>
+        <div class="flex flex-row gap-6" style="align-items: center;">
+          <div style="font-weight: bold;">Passphrase</div>
+          <input id="setup-screen-2-passphrase-inp" class="input input-sm" type="text" style="flex: 1;" />
+        </div>
+      </div>
+      <div class="hero-action">
+        <buttton id="setup-screen-2-continue-btn" class="btn">Join</buttton>
+      </div>
+    </div>
+    <div id="setup-screen-3" class="setup-screen hero-content hidden">
+      <h1 class="hero-title">API Configuration</h1>
+      <p class="hero-subtitle">
+        Help me connect to LTA's DataMall
+      </p>
+      <div class="w-full m-auto flex flex-col gap-6" style="max-width: 576px;">
+        <div class="flex flex-row gap-6" style="align-items: center;">
+          <div id="setup-screen-3-apikey-inp" style="font-weight: bold;">API Key</div>
+          <input class="input input-sm" type="text" style="flex: 1;" />
+        </div>
+      </div>
+      <div class="hero-action">
+        <buttton id="setup-screen-3-continue-btn" class="btn">Save</buttton>
+      </div>
     </div>
   </div>
-  <div id="content-wrapper" style="display: none">
-
-    <div id="app-content" style="height:200vh">
-      <div id="test-element">Should be replaced</div>
-    </div>
+  <div id="state-config" class="hidden app-state">
+    <h1 style="margin-top: 20vh">Setup Complete</h1>
   </div>
 </body>
 

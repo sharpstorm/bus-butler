@@ -19,3 +19,13 @@ body {
   border: 1px solid #000;
   border-radius: 0.5rem;
 }
+
+.loading-container {
+  width: 100%;
+  height: 100svh;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
