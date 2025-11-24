@@ -9,8 +9,7 @@ WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
   server.on("/index.css", HTTP_GET, StaticServeHandler::handleCSS);
 
   server.on("/api/wifi/scan", HTTP_GET, WifiConfigApi::scanWifiNetworks);
-  // TODO: Fix linker error
-  // server.on("/api/wifi/config", HTTP_POST, WifiConfigApi::saveWifiNetwork);
+  server.on("/api/wifi/config", HTTP_POST, WifiConfigApi::saveWifiNetwork);
   server.on("/api/wifi/config", HTTP_GET, WifiConfigApi::getSavedWifiNetwork);
 }
 
