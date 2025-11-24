@@ -1,5 +1,6 @@
 #include "WebConfigServer.h"
 
+#include "Handlers/LtaDatamallConfigApi.h"
 #include "Handlers/StaticServeHandler.h"
 #include "Handlers/WifiConfigApi.h"
 
@@ -11,6 +12,10 @@ WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
   server.on("/api/wifi/scan", HTTP_GET, WifiConfigApi::scanWifiNetworks);
   server.on("/api/wifi/config", HTTP_POST, WifiConfigApi::saveWifiNetwork);
   server.on("/api/wifi/config", HTTP_GET, WifiConfigApi::getSavedWifiNetwork);
+
+  server.on("/api/config/lta-api", HTTP_GET,
+            LtaDatamallConfigApi::getSavedApiKey);
+  server.on("/api/config/lta-api", HTTP_POST, LtaDatamallConfigApi::saveApiKey);
 }
 
 void WebConfigServer::start() { server.begin(); }
