@@ -14,11 +14,10 @@ GT911TouchScreen touchScreen(Wire, TOUCH_SDA, TOUCH_SCL, TOUCH_MODULE_ADDR,
                              TOUCH_RST, TOUCH_INT);
 
 TouchPoint touchPoint(0, 0, 0, 0);
-bool hasTouch = 0;
+bool hasTouch = false;
 
 void touchInit() { touchScreen.start(); }
-
-void touchLoop() {
+void updateTouch() {
   hasTouch = touchScreen.read();
   if (hasTouch) {
     touchPoint = touchScreen.getPoint(0);

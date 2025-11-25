@@ -1,6 +1,8 @@
 #pragma once
 
-class IAppState {
+#include "ITouchHandler.h"
+
+class IAppState : public ITouchHandler {
  public:
   virtual void enter();
   virtual void loop();

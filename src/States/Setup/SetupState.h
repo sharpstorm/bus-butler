@@ -5,7 +5,7 @@
 #include "../ITouchHandler.h"
 #include "SetupScreenRenderer.h"
 
-class SetupState : public IAppState, public ITouchHandler {
+class SetupState : public IAppState {
  private:
   SetupScreenRenderer setupRenderer;
   MDnsClient mdnsClient;
@@ -16,4 +16,5 @@ class SetupState : public IAppState, public ITouchHandler {
   void exit();
 
   void handleTouch(int x, int y);
+  bool isSetupComplete();
 };
