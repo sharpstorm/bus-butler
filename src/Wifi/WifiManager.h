@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Arduino.h"
-#include "Config.h"
 #include "WiFi.h"
 
 #define HOTSPOT_SSID_PREFIX "Butler-"
