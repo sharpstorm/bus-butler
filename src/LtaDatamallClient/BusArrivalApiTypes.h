@@ -31,6 +31,7 @@ struct BusArrivalDetail {
   BusLoad load;
   BusType busType;
   bool isWheelchairAccessible;
+  long arrivalTimestamp;
 };
 
 struct BusArrivalServiceDetail {
@@ -49,3 +50,5 @@ struct BusArrivalApiResponse {
 
 String toReadableBusType(BusType type);
 String toReadableBusLoad(BusLoad load);
+BusLoad toBusLoadEnum(String load);
+BusType toBusTypeEnum(String type);

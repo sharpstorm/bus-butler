@@ -25,3 +25,23 @@ String toReadableBusLoad(BusLoad load) {
       return "Unknown";
   }
 }
+
+BusLoad toBusLoadEnum(String load) {
+  if (load == "SEA") {
+    return BusLoad::SeatsAvailable;
+  } else if (load == "SDA") {
+    return BusLoad::StandingAvailable;
+  } else {
+    return BusLoad::LimitedStandingAvailable;
+  }
+}
+
+BusType toBusTypeEnum(String type) {
+  if (type == "BD") {
+    return BusType::Bendy;
+  } else if (type == "DD") {
+    return BusType::DoubleDeck;
+  } else {
+    return BusType::SingleDeck;
+  }
+}

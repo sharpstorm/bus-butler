@@ -4,6 +4,7 @@
 
 #include "../Config/ConfigManager.h"
 #include "../Util/MemoryPolyfill.h"
+#include "../Util/Time.h"
 
 LtaDatamallClient::LtaDatamallClient() : apiKey("") {
   // We cache the API key into this class
@@ -15,7 +16,6 @@ bool LtaDatamallClient::isConfigured() { return apiKey.length() > 0; }
 void LtaDatamallClient::reconfigure() {
   apiKey = configManager.getLtaDatamallApiKey();
   wifiClient.setCACert(ltaDatamallCaCert);
-  wifiClient.setInsecure();
 }
 
 unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
@@ -27,7 +27,6 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
   char url[60];
   snprintf(url, 60, "%s?BusStopCode=%s", LTA_DATAMALL_BUS_ARRIVAL_API_PATH,
            busStopCode);
-  Serial.println(url);
   if (!httpClient.begin(wifiClient, LTA_DATAMALL_API_HOST, HTTPS_PORT, url,
                         true)) {
     return nullptr;
@@ -75,8 +74,9 @@ BusArrivalDetail LtaDatamallClient::fromJsonResponse(JsonObject resp) {
   return BusArrivalDetail{
       resp["OriginCode"].as<String>(),
       resp["DestinationCode"].as<String>(),
-      resp["Load"].as<BusLoad>(),
-      resp["Type"].as<BusType>(),
+      toBusLoadEnum(resp["Load"].as<String>()),
+      toBusTypeEnum(resp["Type"].as<String>()),
       resp["Feature"].as<String>() == "WAB",
+      TimeUtil::iso8601StringToUnixTime(resp["EstimatedArrival"].as<String>()),
   };
 }
