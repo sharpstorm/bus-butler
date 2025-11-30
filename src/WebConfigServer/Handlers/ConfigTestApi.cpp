@@ -47,7 +47,6 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
     // Yield to not trigger watchdog
     vTaskDelay(pdMS_TO_TICKS(10));
   }
-  vTaskDelete(taskRef);
 
   if (taskResult.apiResp == nullptr) {
     request->send(500, MimeType::JSON,
