@@ -8,3 +8,15 @@ class IAppState : public ITouchHandler {
   virtual void loop();
   virtual void exit();
 };
+
+enum AppState {
+  Init = 0,
+  Boot,
+  Setup,
+  Homescreen,
+};
+
+class IAppStateResolver {
+ public:
+  virtual IAppState* getStateRefById(AppState state);
+};

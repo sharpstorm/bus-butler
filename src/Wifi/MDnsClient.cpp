@@ -10,3 +10,5 @@ void MDnsClient::start() {
 }
 
 void MDnsClient::stop() { mdns_free(); }
+
+MDnsClient mdnsClient;

@@ -8,7 +8,6 @@
 class SetupState : public IAppState {
  private:
   SetupScreenRenderer setupRenderer;
-  MDnsClient mdnsClient;
 
  public:
   void enter();

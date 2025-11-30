@@ -1,19 +1,21 @@
 #pragma once
 
-#include "AppStateStore.h"
-#include "Homescreen/HomescreenState.h"
-#include "Setup/SetupState.h"
+#include "IAppState.h"
 
 class AppStateManager {
  private:
+  IAppStateResolver* stateResolver;
+
   AppState activeState = AppState::Init;
   IAppState* activeStateRef = nullptr;
 
-  SetupState setupState;
-  HomescreenState homescreenState;
-
-  IAppState* getStateRefById(AppState state);
-
  public:
+  // Meant for internal use during bootstrapping. No need to call under any
+  // circumstance
+  void registerAppStateResolver(IAppStateResolver* resolver);
   IAppState* getActiveState();
+  AppState getActiveStateId();
+  void changeState(AppState state);
 };
+
+extern AppStateManager appStateManager;

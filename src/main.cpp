@@ -9,18 +9,16 @@
 
 // Initial state
 bool isPressed = false;
-AppStateManager stateManager;
 
 void setup() {
   setCpuFrequencyMhz(160);
   screen.init();
   touchInit();
-
-  changeAppState(AppState::Setup);
+  appStateManager.changeState(AppState::Boot);
 }
 
 void loop() {
-  IAppState* activeState = stateManager.getActiveState();
+  IAppState* activeState = appStateManager.getActiveState();
   // Handle touch
   updateTouch();
   if (!isPressed && hasTouch) {

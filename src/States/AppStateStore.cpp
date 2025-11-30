@@ -1,5 +1,22 @@
 #include "AppStateStore.h"
 
-AppState activeAppState = AppState::Init;
+#include "AppStateManager.h"
 
-void changeAppState(AppState newState) { activeAppState = newState; }
+AppStateStore::AppStateStore() {
+  appStateManager.registerAppStateResolver(this);
+}
+
+IAppState* AppStateStore::getStateRefById(AppState state) {
+  switch (state) {
+    case AppState::Boot:
+      return &bootState;
+    case AppState::Setup:
+      return &setupState;
+    case AppState::Homescreen:
+      return &homescreenState;
+    default:
+      return nullptr;
+  }
+}
+
+AppStateStore appStateStore;

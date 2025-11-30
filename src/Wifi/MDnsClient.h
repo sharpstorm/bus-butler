@@ -7,3 +7,5 @@ class MDnsClient {
   void start();
   void stop();
 };
+
+extern MDnsClient mdnsClient;

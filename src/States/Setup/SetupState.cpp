@@ -1,14 +1,14 @@
 #include "SetupState.h"
 
 #include "../../Config/ConfigManager.h"
-#include "../../States/AppStateStore.h"
+#include "../../States/AppStateManager.h"
 #include "../../WebConfigServer/WebConfigServer.h"
 #include "../../Wifi/WifiConfigManager.h"
 #include "../../Wifi/WifiManager.h"
 
 void SetupState::enter() {
   if (isSetupComplete()) {
-    changeAppState(AppState::Homescreen);
+    appStateManager.changeState(AppState::Homescreen);
     return;
   }
   setupRenderer.render();
