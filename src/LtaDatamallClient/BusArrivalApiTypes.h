@@ -31,6 +31,8 @@ struct BusArrivalDetail {
   BusLoad load;
   BusType busType;
   bool isWheelchairAccessible;
+
+  // If arrival timestamp is 0, then there is NO DATA
   long arrivalTimestamp;
 };
 

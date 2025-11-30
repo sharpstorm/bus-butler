@@ -27,6 +27,7 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
   char url[60];
   snprintf(url, 60, "%s?BusStopCode=%s", LTA_DATAMALL_BUS_ARRIVAL_API_PATH,
            busStopCode);
+  Serial.println(url);
   if (!httpClient.begin(wifiClient, LTA_DATAMALL_API_HOST, HTTPS_PORT, url,
                         true)) {
     return nullptr;
@@ -44,9 +45,8 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
     return nullptr;
   }
 
-  String body = httpClient.getString();
   JsonDocument doc;
-  deserializeJson(doc, body);
+  deserializeJson(doc, httpClient.getStream());
   JsonObject respRoot = doc.as<JsonObject>();
 
   unique_ptr<BusArrivalApiResponse> resp = make_unique<BusArrivalApiResponse>();
@@ -71,6 +71,14 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
 }
 
 BusArrivalDetail LtaDatamallClient::fromJsonResponse(JsonObject resp) {
+  if (resp.isNull()) {
+    // Return timestamp 0 to signal no data
+    return BusArrivalDetail{
+        "",    "", BusLoad::LimitedStandingAvailable, BusType::SingleDeck,
+        false, 0,
+    };
+  }
+
   return BusArrivalDetail{
       resp["OriginCode"].as<String>(),
       resp["DestinationCode"].as<String>(),

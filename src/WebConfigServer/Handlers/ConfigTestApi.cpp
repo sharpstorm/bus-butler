@@ -61,51 +61,42 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
   root["busStop"] = apiCallResp->busStopCode;
-  // TODO: Fix timestamp
   root["timestamp"] = timeNow;
   JsonArray services = root["services"].to<JsonArray>();
 
   for (int i = 0; i < apiCallResp->services.size(); i++) {
     JsonObject node = services.add<JsonObject>();
-    node["service"] = apiCallResp->services[i].serviceNo;
+    BusArrivalServiceDetail* serviceArrivalDetails =
+        &(apiCallResp->services[i]);
+    node["service"] = serviceArrivalDetails->serviceNo;
+    node["company"] = serviceArrivalDetails->company;
 
-    node["company"] = apiCallResp->services[i].company;
-    JsonObject nextBus1 = node["nextBus1"].to<JsonObject>();
-    nextBus1["arrival"] = apiCallResp->services[i].nextBus.arrivalTimestamp;
-    nextBus1["secondsLeft"] =
-        apiCallResp->services[i].nextBus.arrivalTimestamp - timeNow;
-    nextBus1["busType"] =
-        toReadableBusType(apiCallResp->services[i].nextBus.busType);
-    nextBus1["busLoad"] =
-        toReadableBusLoad(apiCallResp->services[i].nextBus.load);
-    nextBus1["isWAB"] = apiCallResp->services[i].nextBus.isWheelchairAccessible;
-
-    JsonObject nextBus2 = node["nextBus2"].to<JsonObject>();
-    nextBus2["arrival"] = apiCallResp->services[i].nextBus2.arrivalTimestamp;
-    nextBus2["secondsLeft"] =
-        apiCallResp->services[i].nextBus2.arrivalTimestamp - timeNow;
-    nextBus2["busType"] =
-        toReadableBusType(apiCallResp->services[i].nextBus2.busType);
-    nextBus2["busLoad"] =
-        toReadableBusLoad(apiCallResp->services[i].nextBus2.load);
-    nextBus2["isWAB"] =
-        apiCallResp->services[i].nextBus2.isWheelchairAccessible;
-
-    JsonObject nextBus3 = node["nextBus3"].to<JsonObject>();
-    nextBus3["arrival"] = apiCallResp->services[i].nextBus3.arrivalTimestamp;
-    nextBus3["secondsLeft"] =
-        apiCallResp->services[i].nextBus3.arrivalTimestamp - timeNow;
-    nextBus3["busType"] =
-        toReadableBusType(apiCallResp->services[i].nextBus3.busType);
-    nextBus3["busLoad"] =
-        toReadableBusLoad(apiCallResp->services[i].nextBus3.load);
-    nextBus3["isWAB"] =
-        apiCallResp->services[i].nextBus3.isWheelchairAccessible;
+    if (serviceArrivalDetails->nextBus.arrivalTimestamp > 0) {
+      JsonObject nextBus1 = node["nextBus1"].to<JsonObject>();
+      formatBusResponse(nextBus1, serviceArrivalDetails->nextBus, timeNow);
+    }
+    if (serviceArrivalDetails->nextBus2.arrivalTimestamp > 0) {
+      JsonObject nextBus2 = node["nextBus2"].to<JsonObject>();
+      formatBusResponse(nextBus2, serviceArrivalDetails->nextBus2, timeNow);
+    }
+    if (serviceArrivalDetails->nextBus3.arrivalTimestamp > 0) {
+      JsonObject nextBus3 = node["nextBus3"].to<JsonObject>();
+      formatBusResponse(nextBus3, serviceArrivalDetails->nextBus3, timeNow);
+    }
   }
 
   AsyncResponseStream* response = request->beginResponseStream(MimeType::JSON);
   serializeJson(root, *response);
   request->send(response);
+}
+
+void formatBusResponse(const JsonObject& output,
+                       const BusArrivalDetail& arrivalDetails, long timeNow) {
+  output["arrival"] = arrivalDetails.arrivalTimestamp;
+  output["secondsLeft"] = arrivalDetails.arrivalTimestamp - timeNow;
+  output["busType"] = toReadableBusType(arrivalDetails.busType);
+  output["busLoad"] = toReadableBusLoad(arrivalDetails.load);
+  output["isWAB"] = arrivalDetails.isWheelchairAccessible;
 }
 
 bool ConfigTestApi::initDatamallClient() {

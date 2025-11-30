@@ -19,4 +19,7 @@ class ConfigTestApi {
   // Bus Arrival API
   static volatile bool queryBusArrivalCompleted;
   static void queryBusArrivalWorker(void* pvParameters);
+  static void formatBusResponse(const JsonObject& output,
+                                const BusArrivalDetail& arrivalDetails,
+                                long timeNow);
 };
