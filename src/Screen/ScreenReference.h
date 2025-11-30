@@ -25,4 +25,3 @@
 extern Arduino_DataBus* bus;
 extern Arduino_GFX* g;
 extern Arduino_GFX* gfx;
-

@@ -13,11 +13,7 @@ AppStateManager stateManager;
 
 void setup() {
   setCpuFrequencyMhz(160);
-  gfx->begin();
-  gfx->fillScreen(BLACK);
-  pinMode(LCD_BL_PIN, OUTPUT);
-  digitalWrite(LCD_BL_PIN, HIGH);
-
+  screen.init();
   touchInit();
 
   changeAppState(AppState::Setup);

@@ -16,4 +16,18 @@ String ConfigManager::getLtaDatamallApiKey() {
   return apiKey;
 }
 
+void ConfigManager::saveBrightness(uint8_t brightness) {
+  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.putChar(CONFIG_BRIGHTNESS, brightness);
+  preferences.end();
+}
+
+uint8_t ConfigManager::getBrightness() {
+  preferences.begin(CONFIG_NAMESPACE, false);
+  uint8_t brightness = preferences.getChar(CONFIG_BRIGHTNESS, 255);
+  preferences.end();
+
+  return brightness;
+}
+
 ConfigManager configManager;
