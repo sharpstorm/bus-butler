@@ -23,7 +23,6 @@ void BootScreenRenderer::renderInitial() {
 }
 
 void BootScreenRenderer::renderWifiConnected() {
-  gfx->fillScreen(BLACK);
   gfx->fillRect(0, SCREEN_Y_CENTER + 18, SCREEN_WIDTH, 14, BLACK);
   gfx->setTextColor(GREEN);
   ScreenRenderer::drawCenterText("Connected to WiFi", SCREEN_X_CENTER,

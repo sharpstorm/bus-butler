@@ -21,7 +21,7 @@ WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
   server.on("/api/config/screen-brightness", HTTP_POST,
             HardwareConfigApi::setScreenBrightness);
   server.on("/api/config/screen-brightness", HTTP_GET,
-            HardwareConfigApi::setScreenBrightness);
+            HardwareConfigApi::getScreenBrightness);
 
   server.on("/api/test/bus-arrival", HTTP_POST, ConfigTestApi::queryBusArrival);
 }

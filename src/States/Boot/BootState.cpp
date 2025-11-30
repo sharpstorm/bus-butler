@@ -1,6 +1,7 @@
 #include "BootState.h"
 
 #include "../../Config/ConfigManager.h"
+#include "../../Util/Time.h"
 #include "../../WebConfigServer/WebConfigServer.h"
 #include "../../Wifi/WifiConfigManager.h"
 #include "../../Wifi/WifiManager.h"
@@ -15,6 +16,7 @@ void BootState::enter() {
   renderer.renderInitial();
   wifiManager.connectToWifi();
   renderer.renderWifiConnected();
+  TimeUtil::syncer.syncNtpTime();
 
   // Temporary
   mdnsClient.start();
