@@ -90,8 +90,9 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
   request->send(response);
 }
 
-void formatBusResponse(const JsonObject& output,
-                       const BusArrivalDetail& arrivalDetails, long timeNow) {
+void ConfigTestApi::formatBusResponse(const JsonObject& output,
+                                      const BusArrivalDetail& arrivalDetails,
+                                      long timeNow) {
   output["arrival"] = arrivalDetails.arrivalTimestamp;
   output["secondsLeft"] = arrivalDetails.arrivalTimestamp - timeNow;
   output["busType"] = toReadableBusType(arrivalDetails.busType);
