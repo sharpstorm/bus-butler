@@ -1,5 +1,6 @@
 #include "ConfigTestApi.h"
 
+#include "../../Util/Time.h"
 #include "../HttpConstants.h"
 
 struct QueryBusArrivalWorkerDto {
@@ -55,12 +56,13 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
   }
 
   // Serialize Response
+  long timeNow = TimeUtil::getUnixTime();
   BusArrivalApiResponse* apiCallResp = taskResult.apiResp.get();
   JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
   root["busStop"] = apiCallResp->busStopCode;
   // TODO: Fix timestamp
-  root["timestamp"] = 0;
+  root["timestamp"] = timeNow;
   JsonArray services = root["services"].to<JsonArray>();
 
   for (int i = 0; i < apiCallResp->services.size(); i++) {
@@ -70,6 +72,8 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
     node["company"] = apiCallResp->services[i].company;
     JsonObject nextBus1 = node["nextBus1"].to<JsonObject>();
     nextBus1["arrival"] = apiCallResp->services[i].nextBus.arrivalTimestamp;
+    nextBus1["secondsLeft"] =
+        apiCallResp->services[i].nextBus.arrivalTimestamp - timeNow;
     nextBus1["busType"] =
         toReadableBusType(apiCallResp->services[i].nextBus.busType);
     nextBus1["busLoad"] =
@@ -78,6 +82,8 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
 
     JsonObject nextBus2 = node["nextBus2"].to<JsonObject>();
     nextBus2["arrival"] = apiCallResp->services[i].nextBus2.arrivalTimestamp;
+    nextBus2["secondsLeft"] =
+        apiCallResp->services[i].nextBus2.arrivalTimestamp - timeNow;
     nextBus2["busType"] =
         toReadableBusType(apiCallResp->services[i].nextBus2.busType);
     nextBus2["busLoad"] =
@@ -87,6 +93,8 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
 
     JsonObject nextBus3 = node["nextBus3"].to<JsonObject>();
     nextBus3["arrival"] = apiCallResp->services[i].nextBus3.arrivalTimestamp;
+    nextBus3["secondsLeft"] =
+        apiCallResp->services[i].nextBus3.arrivalTimestamp - timeNow;
     nextBus3["busType"] =
         toReadableBusType(apiCallResp->services[i].nextBus3.busType);
     nextBus3["busLoad"] =

@@ -51,6 +51,8 @@ bool WifiManager::connectToWifi() {
   return true;
 }
 
+bool WifiManager::isConnectedToWifi() { return WiFi.isConnected(); }
+
 void WifiManager::disconnectWifi() {
   WiFi.disconnect(true);
   WiFi.setSleep(true);

@@ -12,6 +12,7 @@ class WifiManager {
   // As station
   bool isWifiConfigured();
   bool connectToWifi();
+  bool isConnectedToWifi();
   void disconnectWifi();
   String getConfiguredSsid();
 

@@ -2,9 +2,9 @@
 
 #include <ctime>
 
-using namespace std;
+#include "../Wifi/WifiManager.h"
 
-#define SGT_CORRECTION (8 * 60 * 60)
+using namespace std;
 
 long TimeUtil::iso8601StringToUnixTime(String time) {
   // We assume it follows the format YYYY-mm-DDTHH:MM:SS+TZ
@@ -13,5 +13,37 @@ long TimeUtil::iso8601StringToUnixTime(String time) {
   tm_struct.tm_isdst = 0;
 
   time_t t = std::mktime(&tm_struct);
-  return t - SGT_CORRECTION;
+  return t;
 }
+
+long TimeUtil::getUnixTime() {
+  long unixTime;
+  if (!time(&unixTime)) {
+    return 0;
+  }
+  return unixTime;
+}
+
+TimeSyncer::TimeSyncer() {
+  setenv("TZ", "UTC-8", 1);
+  tzset();
+}
+
+bool TimeSyncer::syncNtpTime() {
+  if (!wifiManager.isConnectedToWifi()) {
+    return false;
+  }
+  configTime(GMT_OFFSET_SECS, 0, NTP_SERVER);
+  return true;
+}
+
+void TimeUtil::printLocalTime() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
+
+TimeSyncer TimeUtil::syncer;
