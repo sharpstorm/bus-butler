@@ -7,6 +7,10 @@
 using namespace std;
 
 long TimeUtil::iso8601StringToUnixTime(String time) {
+  if (time.length() == 0) {
+    return 0;
+  }
+
   // We assume it follows the format YYYY-mm-DDTHH:MM:SS+TZ
   tm tm_struct = {0};
   char* result = strptime(time.c_str(), "%Y-%m-%dT%H:%M:%S%z", &tm_struct);

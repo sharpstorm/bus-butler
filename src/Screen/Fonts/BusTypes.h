@@ -38,3 +38,7 @@ const GFXglyph BusTypesFontGlyphs[] PROGMEM = {
 
 const GFXfont BusTypesFont PROGMEM = {
     (uint8_t*)BusTypesFontBitmap, (GFXglyph*)BusTypesFontGlyphs, 97, 99, 26};
+
+#define BUS_TYPE_FONT_DOUBLE "a"
+#define BUS_TYPE_FONT_SINGLE "b"
+#define BUS_TYPE_FONT_BENDY "c"
