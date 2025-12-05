@@ -1,10 +1,11 @@
 #include "HomescreenState.h"
 
+#include "../../Config/ConfigManager.h"
 #include "../../Screen/Fonts/BusTypes.h"
-#include "../../Screen/Fonts/RobotoMonoDigits30.h"
-#include "../../Screen/Fonts/RobotoMonoDigits40.h"
 #include "../../Screen/Screen.h"
 #include "../../Util/Time.h"
+
+#define TEST_BUS_STOP_CODE "22361"
 
 struct QueryBusArrivalWorkerDto {
   String busStopCode;
@@ -49,7 +50,13 @@ void HomescreenState::loop() {
   }
 }
 
-void HomescreenState::handleTouch(int x, int y) {}
+void HomescreenState::handleTouch(int x, int y) {
+  // Refresh button
+  if (isInHitbox(x, y, SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20)) {
+    // Force refresh
+    lastBusArrivalApiTimestamp = 0;
+  }
+}
 
 void HomescreenState::queryBusArrivalWorker(void* pvParameters) {
   QueryBusArrivalWorkerDto* dtoPtr = (QueryBusArrivalWorkerDto*)(pvParameters);
@@ -60,7 +67,17 @@ void HomescreenState::queryBusArrivalWorker(void* pvParameters) {
 
 void HomescreenState::updateBusArrivalCache() {
   TaskHandle_t taskRef = NULL;
-  QueryBusArrivalWorkerDto taskResult{"21361", nullptr, &ltaDatamallClient,
+  String busStopCode = configManager.getBusStopCode();
+  if (busStopCode.length() == 0) {
+    busStopCode = TEST_BUS_STOP_CODE;
+  }
+  if (cachedBusArrival != nullptr &&
+      cachedBusArrival->busStopCode != busStopCode) {
+    // Clear screen
+    gfx->fillScreen(BLACK);
+  }
+
+  QueryBusArrivalWorkerDto taskResult{busStopCode, nullptr, &ltaDatamallClient,
                                       false};
   xTaskCreate(queryBusArrivalWorker, "homescreen-bus", 8000, &taskResult, 1,
               &taskRef);

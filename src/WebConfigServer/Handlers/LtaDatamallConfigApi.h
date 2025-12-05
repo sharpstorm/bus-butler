@@ -11,4 +11,8 @@ class LtaDatamallConfigApi {
  public:
   static void saveApiKey(AsyncWebServerRequest* request, JsonVariant& json);
   static void getSavedApiKey(AsyncWebServerRequest* request);
+
+  static void saveBusStopCode(AsyncWebServerRequest* request,
+                              JsonVariant& json);
+  static void getSavedBusStopCode(AsyncWebServerRequest* request);
 };

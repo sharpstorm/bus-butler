@@ -6,6 +6,7 @@
 
 #define CONFIG_BUS_API_KEY "bus-api-key"
 #define CONFIG_BRIGHTNESS "brightness"
+#define CONFIG_BUS_STOP_CODE "busstop-code"
 
 class ConfigManager {
  private:
@@ -19,6 +20,9 @@ class ConfigManager {
 
   void saveBrightness(uint8_t brightness);
   uint8_t getBrightness();
+
+  void saveBusStopCode(String busStopCode);
+  String getBusStopCode();
 };
 
 extern ConfigManager configManager;

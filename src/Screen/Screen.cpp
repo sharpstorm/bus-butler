@@ -19,4 +19,10 @@ void Screen::setBrightness(uint8_t brightness) {
 
 uint8_t Screen::getBrightness() { return curBrightness; }
 
+bool isInHitbox(int x, int y, int topLeftX, int topLeftY, int width,
+                int height) {
+  return x >= topLeftX && y >= topLeftY && x <= topLeftX + width &&
+         y <= topLeftY + height;
+}
+
 Screen screen;

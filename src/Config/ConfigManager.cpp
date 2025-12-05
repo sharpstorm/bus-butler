@@ -30,4 +30,18 @@ uint8_t ConfigManager::getBrightness() {
   return brightness;
 }
 
+void ConfigManager::saveBusStopCode(String busStopCode) {
+  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.putString(CONFIG_BUS_STOP_CODE, busStopCode);
+  preferences.end();
+}
+
+String ConfigManager::getBusStopCode() {
+  preferences.begin(CONFIG_NAMESPACE, false);
+  String apiKey = preferences.getString(CONFIG_BUS_STOP_CODE, "");
+  preferences.end();
+
+  return apiKey;
+}
+
 ConfigManager configManager;

@@ -14,3 +14,6 @@ class Screen {
 };
 
 extern Screen screen;
+
+bool isInHitbox(int x, int y, int topLeftX, int topLeftY, int width,
+                int height);

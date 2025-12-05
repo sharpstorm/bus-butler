@@ -23,3 +23,25 @@ void LtaDatamallConfigApi::getSavedApiKey(AsyncWebServerRequest* request) {
     request->send(200, MimeType::JSON, "{ \"isApiKeySaved\": false }");
   }
 }
+
+void LtaDatamallConfigApi::saveBusStopCode(AsyncWebServerRequest* request,
+                                           JsonVariant& jsonBody) {
+  JsonObject reqBody = jsonBody.as<JsonObject>();
+  if (reqBody["busStopCode"].isUnbound()) {
+    request->send(400, MimeType::JSON, "{ \"success\": false }");
+    return;
+  }
+
+  configManager.saveBusStopCode(reqBody["busStopCode"]);
+  request->send(200, MimeType::JSON, "{ \"success\": true }");
+}
+
+void LtaDatamallConfigApi::getSavedBusStopCode(AsyncWebServerRequest* request) {
+  String busStopCode = configManager.getBusStopCode();
+  if (busStopCode.length() > 0) {
+    request->send(200, MimeType::JSON,
+                  "{ \"busStopCode\": \"" + busStopCode + "\" }");
+  } else {
+    request->send(200, MimeType::JSON, "{ \"isApiKeySaved\": null }");
+  }
+}
