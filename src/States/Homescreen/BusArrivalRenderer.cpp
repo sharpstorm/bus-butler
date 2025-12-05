@@ -1,8 +1,10 @@
 #include "BusArrivalRenderer.h"
 
 #include "../../Screen/Fonts/BusTypes.h"
-#include "../../Screen/Fonts/RobotoMonoDigits30.h"
-#include "../../Screen/Fonts/RobotoMonoDigits40.h"
+#include "../../Screen/Fonts/Icons.h"
+#include "../../Screen/Fonts/RobotoMonoLight32.h"
+#include "../../Screen/Fonts/RobotoMonoLightDigits40.h"
+#include "../../Screen/Fonts/RobotoMonoMediumDigits30.h"
 #include "../../Screen/Screen.h"
 #include "../../Util/Time.h"
 
@@ -22,7 +24,11 @@ BusArrivalRenderer* BusArrivalRenderer::renderPosition(
   gfx->drawRoundRect(x, y, 90, 50, 2, MAGENTA);
 
   // Service
-  gfx->setFont(&Roboto_Mono_Light_Digits40);
+  String* serviceNoCstr = &arrivalData->serviceNo;
+  bool isNumeric =
+      all_of(serviceNoCstr->begin(), serviceNoCstr->end(), ::isdigit);
+
+  gfx->setFont(isNumeric ? &Roboto_Mono_Light_Digits40 : &Roboto_Mono_Light_32);
   gfx->setTextColor(WHITE);
   ScreenRenderer::drawCenterText(arrivalData->serviceNo, x + 40, y + 25);
 
@@ -68,6 +74,12 @@ BusArrivalRenderer* BusArrivalRenderer::renderToolbar(
                 RGB565(60, 60, 60));
   ScreenRenderer::drawCenterText(busStopCode, SCREEN_WIDTH - 20,
                                  SCREEN_HEIGHT - 8);
+  gfx->setFont(&IconFont);
+  gfx->fillRect(SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20,
+                RGB565(40, 40, 40));
+  gfx->setTextColor(WHITE);
+  ScreenRenderer::drawCenterText(ICON_REFRESH, SCREEN_WIDTH - 14,
+                                 SCREEN_HEIGHT - 34);
   return this;
 }
 
