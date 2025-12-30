@@ -18,7 +18,12 @@ class TimeUtil {
  public:
   static long iso8601StringToUnixTime(String time);
   static time_t getUnixTime();
+  static String getTimeString();
+  static String getDateString();
 
   static TimeSyncer syncer;
   static void printLocalTime();
+
+  static String monthDisplayText[12];
+  static String dayOfWeekDisplayText[7];
 };

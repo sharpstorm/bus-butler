@@ -12,6 +12,7 @@ class HomescreenState : public IAppState {
  private:
   int32_t lastBusArrivalApiTimestamp = -1;
   int32_t lastBusArrivalPaintTimestamp = -1;
+  int32_t lastDateTimePaintTimestamp = -1;
   unique_ptr<BusArrivalApiResponse> cachedBusArrival = nullptr;
   BusArrivalRenderer busArrivalRenderer;
   LtaDatamallClient ltaDatamallClient;

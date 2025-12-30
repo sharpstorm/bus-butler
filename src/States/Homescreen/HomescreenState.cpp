@@ -48,6 +48,12 @@ void HomescreenState::loop() {
   if (timeNow - lastBusArrivalPaintTimestamp > 30) {
     paintBusArrivalCache();
   }
+
+  if (timeNow - lastDateTimePaintTimestamp > 5) {
+    lastDateTimePaintTimestamp = timeNow;
+    busArrivalRenderer.renderDateTime();
+    busArrivalRenderer.finalize();
+  }
 }
 
 void HomescreenState::handleTouch(int x, int y) {
@@ -55,6 +61,10 @@ void HomescreenState::handleTouch(int x, int y) {
   if (isInHitbox(x, y, SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20)) {
     // Force refresh
     lastBusArrivalApiTimestamp = 0;
+
+    // Settings Button
+  } else if (isInHitbox(x, y, SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20)) {
+    // TODO: Settings action
   }
 }
 
@@ -74,7 +84,7 @@ void HomescreenState::updateBusArrivalCache() {
   if (cachedBusArrival != nullptr &&
       cachedBusArrival->busStopCode != busStopCode) {
     // Clear screen
-    gfx->fillScreen(BLACK);
+    gfx->fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT - 60, BLACK);
   }
 
   QueryBusArrivalWorkerDto taskResult{busStopCode, nullptr, &ltaDatamallClient,
@@ -97,7 +107,7 @@ void HomescreenState::paintBusArrivalCache() {
   }
 
   busArrivalRenderer.renderToolbar(cachedBusArrival->busStopCode);
-  for (int i = 0; i < min(7, (int)cachedBusArrival->services.size()); i++) {
+  for (int i = 0; i < min(6, (int)cachedBusArrival->services.size()); i++) {
     busArrivalRenderer.renderPosition(i, &cachedBusArrival->services[i]);
   }
   busArrivalRenderer.finalize();

@@ -74,12 +74,34 @@ BusArrivalRenderer* BusArrivalRenderer::renderToolbar(
                 RGB565(60, 60, 60));
   ScreenRenderer::drawCenterText(busStopCode, SCREEN_WIDTH - 20,
                                  SCREEN_HEIGHT - 8);
+
   gfx->setFont(&IconFont);
   gfx->fillRect(SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20,
                 RGB565(40, 40, 40));
   gfx->setTextColor(WHITE);
   ScreenRenderer::drawCenterText(ICON_REFRESH, SCREEN_WIDTH - 14,
                                  SCREEN_HEIGHT - 34);
+
+  gfx->setFont(NULL);
+  gfx->fillRect(SCREEN_WIDTH - 48, SCREEN_HEIGHT - 44, 20, 20,
+                RGB565(40, 40, 40));
+  gfx->setTextColor(WHITE);
+  ScreenRenderer::drawCenterText("S", SCREEN_WIDTH - 38, SCREEN_HEIGHT - 34);
+  return this;
+}
+
+BusArrivalRenderer* BusArrivalRenderer::renderDateTime() {
+  gfx->setTextColor(WHITE);
+  gfx->fillRect(0, SCREEN_HEIGHT - 60, 240, 48, BLACK);
+  gfx->setFont(&Roboto_Mono_Light_32);
+  ScreenRenderer::drawText(TimeUtil::getTimeString(), 12, SCREEN_HEIGHT - 34);
+
+  gfx->setTextSize(2);
+  gfx->setFont(NULL);
+  gfx->setTextColor(MAGENTA);
+  ScreenRenderer::drawText(TimeUtil::getDateString(), 12, SCREEN_HEIGHT - 60);
+  gfx->setTextSize(1);
+
   return this;
 }
 

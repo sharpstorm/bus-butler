@@ -27,5 +27,6 @@ class BusArrivalRenderer {
   BusArrivalRenderer* renderPosition(uint8_t position,
                                      BusArrivalServiceDetail* arrivalData);
   BusArrivalRenderer* renderToolbar(const String& busStopCode);
+  BusArrivalRenderer* renderDateTime();
   void finalize();
 };

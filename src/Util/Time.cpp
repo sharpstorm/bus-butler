@@ -6,6 +6,13 @@
 
 using namespace std;
 
+String TimeUtil::monthDisplayText[] = {"Jan", "Feb", "Mar", "Apr",
+                                       "May", "Jun", "Jul", "Aug",
+                                       "Sep", "Oct", "Nov", "Dec"};
+
+String TimeUtil::dayOfWeekDisplayText[] = {"Mon", "Tue", "Wed", "Thu",
+                                           "Fri", "Sat", "Sun"};
+
 long TimeUtil::iso8601StringToUnixTime(String time) {
   if (time.length() == 0) {
     return 0;
@@ -26,6 +33,38 @@ long TimeUtil::getUnixTime() {
     return 0;
   }
   return unixTime;
+}
+
+String TimeUtil::getTimeString() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return "";
+  }
+
+  // HH:mm tt
+  char buf[9];
+  int8_t normalizedHour = timeinfo.tm_hour % 12;
+  int8_t amPmHour = normalizedHour == 0 ? 12 : normalizedHour;
+  String amPm = timeinfo.tm_hour >= 12 ? "pm" : "am";
+  sprintf(buf, "%02d:%02d %s", amPmHour, timeinfo.tm_min, amPm);
+  buf[8] = 0;
+  return String(buf);
+}
+
+String TimeUtil::getDateString() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return "";
+  }
+
+  // ddd DD MMM
+  char buf[11];
+  sprintf(buf, "%s %d %s", dayOfWeekDisplayText[timeinfo.tm_wday],
+          timeinfo.tm_mday, monthDisplayText[timeinfo.tm_mon]);
+  buf[10] = 0;
+  return String(buf);
 }
 
 TimeSyncer::TimeSyncer() {
