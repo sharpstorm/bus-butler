@@ -17,7 +17,7 @@ extern const uint8_t indexCssFileEnd[] asm(
 
 void StaticServeHandler::handleHTML(AsyncWebServerRequest* request) {
   AsyncResponseStream* response = request->beginResponseStream(MimeType::Html);
-  size_t dataLen = indexHtmlFileEnd - indexHtmlFileStart;
+  size_t dataLen = indexHtmlFileEnd - indexHtmlFileStart - 1;
   response->write(indexHtmlFileStart, dataLen);
   request->send(response);
 }
@@ -25,14 +25,14 @@ void StaticServeHandler::handleHTML(AsyncWebServerRequest* request) {
 void StaticServeHandler::handleJS(AsyncWebServerRequest* request) {
   AsyncResponseStream* response =
       request->beginResponseStream(MimeType::Javascript);
-  size_t dataLen = indexJsFileEnd - indexJsFileStart;
+  size_t dataLen = indexJsFileEnd - indexJsFileStart - 1;
   response->write(indexJsFileStart, dataLen);
   request->send(response);
 }
 
 void StaticServeHandler::handleCSS(AsyncWebServerRequest* request) {
   AsyncResponseStream* response = request->beginResponseStream(MimeType::Css);
-  size_t dataLen = indexCssFileEnd - indexCssFileStart;
+  size_t dataLen = indexCssFileEnd - indexCssFileStart - 1;
   response->write(indexCssFileStart, dataLen);
   request->send(response);
 }

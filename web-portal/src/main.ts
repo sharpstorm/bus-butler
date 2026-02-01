@@ -1,3 +1,4 @@
+import { Api } from './api'
 import { SetupState } from './setup-state'
 import { setAppState } from './state'
 
@@ -27,12 +28,17 @@ function initTheme() {
   })
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initTheme()
-  
-  setupState = new SetupState()
-  setupState.onWorkflowComplete(() => {
+
+  const configuredSsid = await Api.getConfiguredWifiSsid()
+  if (configuredSsid) {
     setAppState('config')
-  })
-  setAppState('setup')
+  } else {
+    setupState = new SetupState()
+    setupState.onWorkflowComplete(() => {
+      setAppState('config')
+    })
+    setAppState('setup')
+  }
 })
