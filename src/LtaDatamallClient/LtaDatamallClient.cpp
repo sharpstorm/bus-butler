@@ -37,16 +37,24 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
   httpClient.addHeader("Connection", "close");
   httpClient.addHeader("AccountKey", apiKey);
   httpClient.addHeader("User-Agent", "axios/3.0.5");
+  httpClient.setTimeout(5000);         // 5 second timeout
+  httpClient.setConnectTimeout(3000);  // 3 second connection timeout
 
   int httpCode = httpClient.GET();
-  httpClient.end();
 
   if (httpCode != 200) {
     return nullptr;
   }
 
   JsonDocument doc;
-  deserializeJson(doc, httpClient.getStream());
+  DeserializationError error = deserializeJson(doc, httpClient.getStream());
+  httpClient.end();
+  if (error) {
+    Serial.print("JSON deserialization failed: ");
+    Serial.println(error.c_str());
+    return nullptr;
+  }
+
   JsonObject respRoot = doc.as<JsonObject>();
 
   unique_ptr<BusArrivalApiResponse> resp = make_unique<BusArrivalApiResponse>();
