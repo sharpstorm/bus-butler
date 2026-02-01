@@ -1,3 +1,13 @@
+/* Display */
+.hidden {
+  display: none !important;
+}
+
+.invisible {
+  visibility: hidden;
+}
+
+/* Flexbox */
 .flex {
   display: flex;
 }
@@ -10,31 +20,31 @@
   flex-direction: column;
 }
 
-.hidden {
-  display: none;
+.items-center {
+  align-items: center;
 }
 
-.invisible {
-  visibility: hidden;
+.justify-center {
+  justify-content: center;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+.justify-between {
+  justify-content: space-between;
 }
 
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
+/* Width */
 .w-full {
   width: 100%;
 }
 
+/* Margin */
 .m-auto {
   margin: auto;
+}
+
+/* Gap */
+.gap-2 {
+  gap: 0.5rem;
 }
 
 .gap-4 {
@@ -47,4 +57,14 @@
 
 .gap-8 {
   gap: 2rem;
+}
+
+/* Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }

@@ -1,34 +1,86 @@
 .hero {
   min-height: 100vh;
-  background-color: var(--color-base-200);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, var(--color-primary-light) 0%, transparent 70%);
+  opacity: 0.3;
+  animation: float 20s ease-in-out infinite;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -50%;
+  left: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, var(--color-accent-light) 0%, transparent 70%);
+  opacity: 0.2;
+  animation: float 25s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(30px, -30px);
+  }
+  66% {
+    transform: translate(-20px, 20px);
+  }
 }
 
 .hero-content {
+  position: relative;
+  z-index: 1;
   text-align: center;
   width: 100%;
   display: flex;
-  justify-content: center;
   flex-direction: column;
-}
-
-.hero-title {
-  font-size: 3rem;
-  font-weight: bold;
-  margin: 0;
-}
-
-.hero-subtitle {
-  font-size: 1.5rem;
-  font-weight: 500;
-  padding-top: 2rem;
+  align-items: center;
 }
 
 .hero-action {
-  padding-top: 2rem;
-  text-align: center;
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Setup Screens */
+.setup-screen {
+  width: 100%;
+  opacity: 1;
+  transition: opacity var(--transition-slow);
+}
+
+.setup-screen.hidden {
+  display: none;
+  opacity: 0;
+}
+
+/* App States */
+.app-state {
+  transition: opacity var(--transition-slow);
+}
+
+.app-state.hidden {
+  display: none;
+  opacity: 0;
 }
