@@ -9,7 +9,7 @@ void ConfigManager::saveLtaDatamallApiKey(String apiKey) {
 }
 
 String ConfigManager::getLtaDatamallApiKey() {
-  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.begin(CONFIG_NAMESPACE, true);
   String apiKey = preferences.getString(CONFIG_BUS_API_KEY, "");
   preferences.end();
 
@@ -23,7 +23,7 @@ void ConfigManager::saveBrightness(uint8_t brightness) {
 }
 
 uint8_t ConfigManager::getBrightness() {
-  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.begin(CONFIG_NAMESPACE, true);
   uint8_t brightness = preferences.getChar(CONFIG_BRIGHTNESS, 255);
   preferences.end();
 
@@ -37,7 +37,7 @@ void ConfigManager::saveBusStopCode(String busStopCode) {
 }
 
 String ConfigManager::getBusStopCode() {
-  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.begin(CONFIG_NAMESPACE, true);
   String apiKey = preferences.getString(CONFIG_BUS_STOP_CODE, "");
   preferences.end();
 

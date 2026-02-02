@@ -41,8 +41,8 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
   httpClient.setConnectTimeout(3000);  // 3 second connection timeout
 
   int httpCode = httpClient.GET();
-
   if (httpCode != 200) {
+    httpClient.end();
     return nullptr;
   }
 
@@ -75,7 +75,7 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
          fromJsonResponse(nextBus2), fromJsonResponse(nextBus3)});
   }
 
-  return move(resp);
+  return resp;
 }
 
 BusArrivalDetail LtaDatamallClient::fromJsonResponse(JsonObject resp) {

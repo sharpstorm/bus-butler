@@ -4,9 +4,9 @@
 
 class IAppState : public ITouchHandler {
  public:
-  virtual void enter();
-  virtual void loop();
-  virtual void exit();
+  virtual void enter() = 0;
+  virtual void loop() = 0;
+  virtual void exit() = 0;
 };
 
 enum AppState {

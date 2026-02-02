@@ -10,7 +10,7 @@ void WifiConfigManager::putConfig(String ssid, String passphrase) {
 }
 
 WifiConfig WifiConfigManager::getConfig() {
-  preferences.begin(WIFI_CONFIG_NAMESPACE, false);
+  preferences.begin(WIFI_CONFIG_NAMESPACE, true);
   String ssid = preferences.getString(WIFI_CONFIG_SSID_KEY, "");
   String passphrase = preferences.getString(WIFI_CONFIG_PASSPHRASE_KEY, "");
   preferences.end();

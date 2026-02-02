@@ -13,11 +13,11 @@
 
 class BusArrivalRenderer {
  private:
-  uint8_t renderGridX[2]{BUS_ARRIVAL_RENDER_COL_1_X,
-                         BUS_ARRIVAL_RENDER_COL_2_X};
-  uint8_t renderGridY[4]{BUS_ARRIVAL_RENDER_ROW_1_Y, BUS_ARRIVAL_RENDER_ROW_2_Y,
-                         BUS_ARRIVAL_RENDER_ROW_3_Y,
-                         BUS_ARRIVAL_RENDER_ROW_4_Y};
+  uint16_t renderGridX[2]{BUS_ARRIVAL_RENDER_COL_1_X,
+                          BUS_ARRIVAL_RENDER_COL_2_X};
+  uint16_t renderGridY[4]{
+      BUS_ARRIVAL_RENDER_ROW_1_Y, BUS_ARRIVAL_RENDER_ROW_2_Y,
+      BUS_ARRIVAL_RENDER_ROW_3_Y, BUS_ARRIVAL_RENDER_ROW_4_Y};
 
   String toReadableMins(long arrivalTimestamp, long timeNow);
   uint16_t resolveLoadColor(BusLoad load);
