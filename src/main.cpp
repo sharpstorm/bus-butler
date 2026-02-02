@@ -19,6 +19,11 @@ void setup() {
 
 void loop() {
   IAppState* activeState = appStateManager.getActiveState();
+  if (activeState == nullptr) {
+    appStateManager.changeState(AppState::Boot);
+    return;
+  }
+
   // Handle touch
   updateTouch();
   if (!isPressed && hasTouch) {
