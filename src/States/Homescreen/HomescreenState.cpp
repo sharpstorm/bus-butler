@@ -58,12 +58,12 @@ void HomescreenState::loop() {
 
 void HomescreenState::handleTouch(int x, int y) {
   // Refresh button
-  if (isInHitbox(x, y, SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20)) {
+  if (isInHitbox(x, y, SCREEN_WIDTH - 36, SCREEN_HEIGHT - 56, 32, 32)) {
     // Force refresh
     lastBusArrivalApiTimestamp = 0;
 
     // Settings Button
-  } else if (isInHitbox(x, y, SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20)) {
+  } else if (isInHitbox(x, y, SCREEN_WIDTH - 78, SCREEN_HEIGHT - 56, 32, 32)) {
     // TODO: Settings action
   }
 }

@@ -2,6 +2,8 @@
 
 #include "Screen.h"
 
+#define padding(overallLen, contentLen) ((overallLen - contentLen) / 2)
+
 class ScreenRenderer {
  public:
   static void drawCenterText(const char* text, int centerX, int centerY);

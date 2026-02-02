@@ -75,18 +75,19 @@ BusArrivalRenderer* BusArrivalRenderer::renderToolbar(
   ScreenRenderer::drawCenterText(busStopCode, SCREEN_WIDTH - 20,
                                  SCREEN_HEIGHT - 8);
 
-  gfx->setFont(&IconFont);
-  gfx->fillRect(SCREEN_WIDTH - 24, SCREEN_HEIGHT - 44, 20, 20,
+  // Refresh Button
+  gfx->fillRect(SCREEN_WIDTH - 36, SCREEN_HEIGHT - 56, 32, 32,
                 RGB565(40, 40, 40));
-  gfx->setTextColor(WHITE);
-  ScreenRenderer::drawCenterText(ICON_REFRESH, SCREEN_WIDTH - 14,
-                                 SCREEN_HEIGHT - 34);
+  gfx->drawBitmap(SCREEN_WIDTH - 36 + padding(32, ICON_REFRESH_WIDTH),
+                  SCREEN_HEIGHT - 56 + padding(32, ICON_REFRESH_HEIGHT),
+                  ICON_REFRESH, ICON_REFRESH_WIDTH, ICON_REFRESH_HEIGHT, WHITE);
 
-  gfx->setFont(NULL);
-  gfx->fillRect(SCREEN_WIDTH - 48, SCREEN_HEIGHT - 44, 20, 20,
+  // Settings Button
+  gfx->fillRect(SCREEN_WIDTH - 78, SCREEN_HEIGHT - 56, 32, 32,
                 RGB565(40, 40, 40));
-  gfx->setTextColor(WHITE);
-  ScreenRenderer::drawCenterText("S", SCREEN_WIDTH - 38, SCREEN_HEIGHT - 34);
+  gfx->drawBitmap(SCREEN_WIDTH - 78 + padding(32, ICON_COG_WIDTH),
+                  SCREEN_HEIGHT - 56 + padding(32, ICON_COG_HEIGHT), ICON_COG,
+                  ICON_COG_WIDTH, ICON_COG_HEIGHT, WHITE);
   return this;
 }
 
