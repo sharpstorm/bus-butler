@@ -10,8 +10,8 @@ String TimeUtil::monthDisplayText[] = {"Jan", "Feb", "Mar", "Apr",
                                        "May", "Jun", "Jul", "Aug",
                                        "Sep", "Oct", "Nov", "Dec"};
 
-String TimeUtil::dayOfWeekDisplayText[] = {"Mon", "Tue", "Wed", "Thu",
-                                           "Fri", "Sat", "Sun"};
+String TimeUtil::dayOfWeekDisplayText[] = {"Sun", "Mon", "Tue", "Wed",
+                                           "Thu", "Fri", "Sat"};
 
 long TimeUtil::iso8601StringToUnixTime(String time) {
   if (time.length() == 0) {
