@@ -70,7 +70,5 @@ void WifiConfigApi::getSavedWifiNetwork(AsyncWebServerRequest* request) {
     return;
   }
 
-  char respBody[50];
-  sprintf(respBody, "{ \"ssid\": \"%s\" }", config.ssid.c_str());
-  request->send(200, MimeType::JSON, respBody);
+  request->send(200, MimeType::JSON, "{ \"ssid\": \"" + config.ssid + "\" }");
 }
