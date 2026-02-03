@@ -1,5 +1,7 @@
 #include "BusArrivalRenderer.h"
 
+#include <Screen/Fonts/ErrorIcon.h>
+
 #include "../../Screen/Fonts/BusTypes.h"
 #include "../../Screen/Fonts/Icons.h"
 #include "../../Screen/Fonts/RobotoMonoLight32.h"
@@ -7,6 +9,11 @@
 #include "../../Screen/Fonts/RobotoMonoMediumDigits30.h"
 #include "../../Screen/Screen.h"
 #include "../../Util/Time.h"
+
+BusArrivalRenderer* BusArrivalRenderer::clearBusArrival() {
+  gfx->fillRect(0, 0, SCREEN_WIDTH, 200, BLACK);
+  return this;
+}
 
 BusArrivalRenderer* BusArrivalRenderer::renderPosition(
     uint8_t position, BusArrivalServiceDetail* arrivalData) {
@@ -103,6 +110,29 @@ BusArrivalRenderer* BusArrivalRenderer::renderDateTime() {
   ScreenRenderer::drawText(TimeUtil::getDateString(), 12, SCREEN_HEIGHT - 60);
   gfx->setTextSize(1);
 
+  return this;
+}
+
+BusArrivalRenderer* BusArrivalRenderer::renderError(const char* message) {
+  // Clear the main content area (preserve toolbar area at bottom)
+  gfx->fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT - 70, BLACK);
+
+  // Calculate center position for the icon
+  int iconX = (SCREEN_WIDTH - ERROR_ICON_WIDTH) / 2;
+  int iconY = (SCREEN_HEIGHT - 70 - ERROR_ICON_HEIGHT) / 2 - 20;
+
+  // Draw sad face bitmap in red
+  gfx->drawBitmap(iconX, iconY, ERROR_ICON_SAD_FACE, ERROR_ICON_WIDTH,
+                  ERROR_ICON_HEIGHT, RED);
+
+  // Draw error message below the icon
+  gfx->setFont(NULL);
+  gfx->setTextSize(2);
+  gfx->setTextColor(WHITE);
+  ScreenRenderer::drawCenterText(message, SCREEN_WIDTH / 2,
+                                 iconY + ERROR_ICON_HEIGHT + 25);
+  gfx->setTextSize(1);
+  finalize();
   return this;
 }
 

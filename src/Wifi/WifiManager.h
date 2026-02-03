@@ -15,6 +15,7 @@ class WifiManager {
   bool isConnectedToWifi();
   void disconnectWifi();
   String getConfiguredSsid();
+  void reconnectIfNeeded();
 
   // As AP
   void startWifiHotspot();

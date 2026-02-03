@@ -4,6 +4,10 @@
 #include "../Util/HardwareId.h"
 #include "WifiConfigManager.h"
 
+// Reliable public DNS servers
+static const IPAddress DNS_PRIMARY(8, 8, 8, 8);    // Google
+static const IPAddress DNS_SECONDARY(1, 1, 1, 1);  // Cloudflare
+
 WifiManager::WifiManager() {
   // Compute hotspot SSID
   // Secret is 32 bytes
@@ -48,7 +52,18 @@ bool WifiManager::connectToWifi() {
     }
   }
 
+  WiFi.config(WiFi.localIP(), WiFi.gatewayIP(), WiFi.subnetMask(), DNS_PRIMARY,
+              DNS_SECONDARY);
+
   return true;
+}
+
+void WifiManager::reconnectIfNeeded() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi disconnected, reconnecting...");
+    WiFi.disconnect();
+    connectToWifi();
+  }
 }
 
 bool WifiManager::isConnectedToWifi() { return WiFi.isConnected(); }

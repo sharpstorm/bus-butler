@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <nvs_flash.h>
 
 #include "Screen/Screen.h"
 #include "States/AppStateManager.h"
@@ -11,6 +12,8 @@
 bool isPressed = false;
 
 void setup() {
+  // nvs_flash_init();
+  Serial.begin(115200);
   setCpuFrequencyMhz(160);
   screen.init();
   touchInit();

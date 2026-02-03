@@ -9,6 +9,7 @@
 LtaDatamallClient::LtaDatamallClient() : apiKey("") {
   // We cache the API key into this class
   reconfigure();
+  httpClient.useHTTP10(true);
 }
 
 bool LtaDatamallClient::isConfigured() { return apiKey.length() > 0; }
@@ -26,32 +27,52 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
 
   char url[60];
   snprintf(url, 60, "%s?BusStopCode=%s", LTA_DATAMALL_BUS_ARRIVAL_API_PATH,
-           busStopCode);
-  Serial.println(url);
-  if (!httpClient.begin(wifiClient, LTA_DATAMALL_API_HOST, HTTPS_PORT, url,
-                        true)) {
-    return nullptr;
-  }
+           busStopCode.c_str());
 
-  httpClient.addHeader("Host", LTA_DATAMALL_API_HOST);
-  httpClient.addHeader("Connection", "close");
-  httpClient.addHeader("AccountKey", apiKey);
-  httpClient.addHeader("User-Agent", "axios/3.0.5");
-  httpClient.setTimeout(5000);         // 5 second timeout
-  httpClient.setConnectTimeout(3000);  // 3 second connection timeout
+  for (int attempt = 1; attempt <= LTA_DATAMALL_MAX_RETRIES; attempt++) {
+    if (!httpClient.begin(wifiClient, LTA_DATAMALL_API_HOST, HTTPS_PORT, url,
+                          true)) {
+      if (attempt < LTA_DATAMALL_MAX_RETRIES) {
+        delay(LTA_DATAMALL_RETRY_DELAY_MS);
+        continue;
+      }
+      return nullptr;
+    }
 
-  int httpCode = httpClient.GET();
-  if (httpCode != 200) {
+    httpClient.addHeader("Host", LTA_DATAMALL_API_HOST);
+    httpClient.addHeader("Connection", "close");
+    httpClient.addHeader("AccountKey", apiKey);
+    httpClient.addHeader("User-Agent", "axios/3.0.5");
+    httpClient.setTimeout(10000);        // 10 second timeout
+    httpClient.setConnectTimeout(3000);  // 3 second connection timeout
+
+    int httpCode = httpClient.GET();
+    if (httpCode == 200) {
+      break;
+    }
+
+    // Not successful, disconnect and figure out if we should retry
     httpClient.end();
-    return nullptr;
+    if (httpCode >= 400 && httpCode < 500) {
+      return nullptr;
+    }
+
+    if (attempt < LTA_DATAMALL_MAX_RETRIES) {
+      delay(LTA_DATAMALL_RETRY_DELAY_MS);
+    } else {
+      return nullptr;
+    }
   }
 
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, httpClient.getStream());
-  httpClient.end();
   if (error) {
     Serial.print("JSON deserialization failed: ");
     Serial.println(error.c_str());
+    return nullptr;
+  }
+
+  if (!doc.is<JsonObject>()) {
     return nullptr;
   }
 
@@ -75,6 +96,7 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
          fromJsonResponse(nextBus2), fromJsonResponse(nextBus3)});
   }
 
+  httpClient.end();
   return resp;
 }
 

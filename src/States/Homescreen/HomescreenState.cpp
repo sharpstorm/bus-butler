@@ -89,8 +89,13 @@ void HomescreenState::updateBusArrivalCache() {
 
   QueryBusArrivalWorkerDto taskResult{busStopCode, nullptr, &ltaDatamallClient,
                                       false};
-  xTaskCreate(queryBusArrivalWorker, "homescreen-bus", 8000, &taskResult, 1,
-              &taskRef);
+  BaseType_t taskCreated = xTaskCreate(queryBusArrivalWorker, "homescreen-bus",
+                                       8000, &taskResult, 1, &taskRef);
+
+  if (taskCreated != pdPASS) {
+    busArrivalRenderer.renderError("API request failed");
+    return;
+  }
 
   while (!taskResult.isCompleted) {
     vTaskDelay(pdMS_TO_TICKS(10));
@@ -98,6 +103,10 @@ void HomescreenState::updateBusArrivalCache() {
 
   cachedBusArrival = move(taskResult.apiResp);
   lastBusArrivalApiTimestamp = TimeUtil::getUnixTime();
+
+  if (cachedBusArrival == nullptr) {
+    busArrivalRenderer.renderError("API request failed");
+  }
 }
 
 void HomescreenState::paintBusArrivalCache() {
@@ -107,6 +116,7 @@ void HomescreenState::paintBusArrivalCache() {
   }
 
   busArrivalRenderer.renderToolbar(cachedBusArrival->busStopCode);
+  busArrivalRenderer.clearBusArrival();
   for (int i = 0; i < min(6, (int)cachedBusArrival->services.size()); i++) {
     busArrivalRenderer.renderPosition(i, &cachedBusArrival->services[i]);
   }

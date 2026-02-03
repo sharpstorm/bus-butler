@@ -12,6 +12,8 @@
 #define LTA_DATAMALL_API_HOST "datamall2.mytransport.sg"
 #define LTA_DATAMALL_BUS_ARRIVAL_API_PATH "/ltaodataservice/v3/BusArrival"
 #define HTTPS_PORT 443
+#define LTA_DATAMALL_MAX_RETRIES 3
+#define LTA_DATAMALL_RETRY_DELAY_MS 1000
 
 using namespace std;
 
