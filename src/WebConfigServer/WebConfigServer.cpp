@@ -4,6 +4,7 @@
 #include "Handlers/HardwareConfigApi.h"
 #include "Handlers/LtaDatamallConfigApi.h"
 #include "Handlers/StaticServeHandler.h"
+#include "Handlers/WeatherConfigApi.h"
 #include "Handlers/WifiConfigApi.h"
 
 WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
@@ -27,6 +28,19 @@ WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
             HardwareConfigApi::setScreenBrightness);
   server.on("/api/config/screen-brightness", HTTP_GET,
             HardwareConfigApi::getScreenBrightness);
+
+  server.on("/api/config/weather-region", HTTP_POST,
+            WeatherConfigApi::saveWeatherRegion);
+  server.on("/api/config/weather-region", HTTP_GET,
+            WeatherConfigApi::getWeatherRegion);
+  server.on("/api/config/weather-town", HTTP_POST,
+            WeatherConfigApi::saveWeatherTown);
+  server.on("/api/config/weather-town", HTTP_GET,
+            WeatherConfigApi::getWeatherTown);
+  server.on("/api/config/weather-region-list", HTTP_GET,
+            WeatherConfigApi::listWeatherRegions);
+  server.on("/api/config/weather-town-list", HTTP_GET,
+            WeatherConfigApi::listWeatherTowns);
 
   server.on("/api/test/bus-arrival", HTTP_POST, ConfigTestApi::queryBusArrival);
 }

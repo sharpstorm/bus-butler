@@ -7,6 +7,8 @@
 #define CONFIG_BUS_API_KEY "bus-api-key"
 #define CONFIG_BRIGHTNESS "brightness"
 #define CONFIG_BUS_STOP_CODE "busstop-code"
+#define CONFIG_WEATHER_REGION "weather-region"
+#define CONFIG_WEATHER_TOWN "weather-town"
 
 class ConfigManager {
  private:
@@ -23,6 +25,12 @@ class ConfigManager {
 
   void saveBusStopCode(String busStopCode);
   String getBusStopCode();
+
+  void saveWeatherRegion(String region);
+  String getWeatherRegion();
+
+  void saveWeatherTown(String town);
+  String getWeatherTown();
 };
 
 extern ConfigManager configManager;

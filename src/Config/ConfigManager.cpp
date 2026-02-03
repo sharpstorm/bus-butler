@@ -44,4 +44,30 @@ String ConfigManager::getBusStopCode() {
   return apiKey;
 }
 
+void ConfigManager::saveWeatherRegion(String region) {
+  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.putString(CONFIG_WEATHER_REGION, region);
+  preferences.end();
+}
+
+String ConfigManager::getWeatherRegion() {
+  preferences.begin(CONFIG_NAMESPACE, true);
+  String region = preferences.getString(CONFIG_WEATHER_REGION, "");
+  preferences.end();
+  return region;
+}
+
+void ConfigManager::saveWeatherTown(String town) {
+  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.putString(CONFIG_WEATHER_TOWN, town);
+  preferences.end();
+}
+
+String ConfigManager::getWeatherTown() {
+  preferences.begin(CONFIG_NAMESPACE, true);
+  String town = preferences.getString(CONFIG_WEATHER_TOWN, "");
+  preferences.end();
+  return town;
+}
+
 ConfigManager configManager;

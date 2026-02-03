@@ -12,7 +12,6 @@
 bool isPressed = false;
 
 void setup() {
-  // nvs_flash_init();
   Serial.begin(115200);
   setCpuFrequencyMhz(160);
   screen.init();
