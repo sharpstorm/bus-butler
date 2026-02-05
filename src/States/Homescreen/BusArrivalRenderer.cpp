@@ -1,164 +1,188 @@
 #include "BusArrivalRenderer.h"
 
-#include <Screen/Fonts/ErrorIcon.h>
-
+#include "../../Screen/Colors.h"
 #include "../../Screen/Fonts/BusTypes.h"
+#include "../../Screen/Fonts/ErrorIcon.h"
 #include "../../Screen/Fonts/Icons.h"
 #include "../../Screen/Fonts/RobotoMonoLight32.h"
 #include "../../Screen/Fonts/RobotoMonoLightDigits40.h"
 #include "../../Screen/Fonts/RobotoMonoMediumDigits30.h"
 #include "../../Screen/Screen.h"
 #include "../../Util/Time.h"
+#include "RendererUtil.h"
 
-BusArrivalRenderer* BusArrivalRenderer::clearBusArrival() {
-  gfx->fillRect(0, 0, SCREEN_WIDTH, 200, BLACK);
-  return this;
+void BusArrivalRenderer::drawGlowBorder(int16_t x, int16_t y, int16_t w,
+                                        int16_t h, uint16_t glowColor,
+                                        uint16_t borderColor) {
+  gfx->drawRect(x - 1, y - 1, w + 2, h + 2, glowColor);
+  gfx->drawRect(x, y, w, h, borderColor);
+  gfx->drawFastHLine(x + 1, y + 1, w - 2, borderColor);
 }
 
-BusArrivalRenderer* BusArrivalRenderer::renderPosition(
-    uint8_t position, BusArrivalServiceDetail* arrivalData) {
-  if (position >= 7) {
-    return this;
-  }
+void BusArrivalRenderer::drawCard(int16_t x, int16_t y,
+                                  BusArrivalServiceDetail* data) {
+  gfx->fillRect(x, y, BUS_ARRIVAL_CARD_WIDTH, BUS_ARRIVAL_CARD_HEIGHT, BG_CARD);
+  drawGlowBorder(x, y, BUS_ARRIVAL_CARD_WIDTH, BUS_ARRIVAL_CARD_HEIGHT,
+                 DIM_CYAN, NEON_CYAN);
 
-  int x = renderGridX[position % 2];
-  int y = renderGridY[position / 2];
-  long timeNow = TimeUtil::getUnixTime();
+  const int serviceBoxW = 80;
+  gfx->fillRect(x + 2, y + 2, serviceBoxW, BUS_ARRIVAL_CARD_HEIGHT - 4,
+                BG_HIGHLIGHT);
+  gfx->drawRect(x + 2, y + 2, serviceBoxW, BUS_ARRIVAL_CARD_HEIGHT - 4,
+                NEON_MAGENTA);
 
-  gfx->fillRect(x, y, 235, 60, BLACK);
-
-  // Service box
-  gfx->drawRoundRect(x, y, 90, 50, 2, MAGENTA);
-
-  // Service
-  String* serviceNoCstr = &arrivalData->serviceNo;
-  bool isNumeric =
-      all_of(serviceNoCstr->begin(), serviceNoCstr->end(), ::isdigit);
+  String* serviceNo = &data->serviceNo;
+  const bool isNumeric =
+      all_of(serviceNo->begin(), serviceNo->end(), ::isdigit);
 
   gfx->setFont(isNumeric ? &Roboto_Mono_Light_Digits40 : &Roboto_Mono_Light_32);
   gfx->setTextColor(WHITE);
-  ScreenRenderer::drawCenterText(arrivalData->serviceNo, x + 40, y + 25);
+  ScreenRenderer::drawCenterText(*serviceNo, x + 2 + serviceBoxW / 2,
+                                 y + BUS_ARRIVAL_CARD_HEIGHT / 2);
 
-  BusArrivalDetail* arrival1 = &arrivalData->nextBus;
-  BusArrivalDetail* arrival2 = &arrivalData->nextBus2;
-  bool hasArrival1 = arrival1->arrivalTimestamp > 0;
-  bool hasArrival2 = arrival2->arrivalTimestamp > 0;
+  const long timeNow = TimeUtil::getUnixTime();
 
-  // Arrival 1 and 2
-  gfx->setFont(&Roboto_Mono_Medium_Digits30);
-  if (hasArrival1) {
-    gfx->setTextColor(resolveLoadColor(arrival1->load));
-    ScreenRenderer::drawText(
-        toReadableMins(arrival1->arrivalTimestamp, timeNow), x + 100, y + 27);
+  drawArrivalTime(x + 90, y + 6, &data->nextBus, timeNow);
+  drawArrivalTime(x + 158, y + 6, &data->nextBus2, timeNow);
+
+  if (data->nextBus3.arrivalTimestamp > 0) {
+    const int mins = (data->nextBus3.arrivalTimestamp - timeNow) / 60;
+    if (mins >= 0 && mins < 99) {
+      gfx->setFont(NULL);
+      gfx->setTextSize(1);
+      gfx->setTextColor(GRAY_LIGHT);
+      ScreenRenderer::drawText(String(mins) + "m", x + 200,
+                               y + BUS_ARRIVAL_CARD_HEIGHT - 16);
+    }
   }
 
-  if (hasArrival2) {
-    gfx->setTextColor(resolveLoadColor(arrival2->load));
-    ScreenRenderer::drawText(
-        toReadableMins(arrival2->arrivalTimestamp, timeNow), x + 155, y + 27);
-  }
-
-  // Bus type 1 and 2
   gfx->setFont(&BusTypesFont);
-  gfx->setTextColor(CYAN);
-  if (hasArrival1) {
-    ScreenRenderer::drawText(resolveBusTypeIcon(arrival1->busType), x + 100,
-                             y - 2);
-  }
-  if (hasArrival2) {
-    ScreenRenderer::drawText(resolveBusTypeIcon(arrival2->busType), x + 155,
-                             y - 2);
-  }
+  gfx->setTextColor(NEON_BLUE);
 
-  return this;
+  if (data->nextBus.arrivalTimestamp > 0) {
+    ScreenRenderer::drawText(getBusTypeIcon(data->nextBus.busType), x + 90,
+                             y + 30);
+  }
+  if (data->nextBus2.arrivalTimestamp > 0) {
+    ScreenRenderer::drawText(getBusTypeIcon(data->nextBus2.busType), x + 156,
+                             y + 30);
+  }
 }
 
-BusArrivalRenderer* BusArrivalRenderer::renderToolbar(
-    const String& busStopCode) {
-  gfx->setFont(NULL);
-  gfx->setTextColor(WHITE);
-  gfx->fillRect(SCREEN_WIDTH - 40, SCREEN_HEIGHT - 16, 40, 16,
-                RGB565(60, 60, 60));
-  ScreenRenderer::drawCenterText(busStopCode, SCREEN_WIDTH - 20,
-                                 SCREEN_HEIGHT - 8);
+void BusArrivalRenderer::drawArrivalTime(int16_t x, int16_t y,
+                                         BusArrivalDetail* arrival,
+                                         long timeNow) {
+  if (arrival->arrivalTimestamp <= 0) {
+    gfx->setFont(NULL);
+    gfx->setTextSize(2);
+    gfx->setTextColor(GRAY_MID);
+    ScreenRenderer::drawText("--", x, y + 8);
+    gfx->setTextSize(1);
+    return;
+  }
 
-  // Refresh Button
-  gfx->fillRect(SCREEN_WIDTH - 36, SCREEN_HEIGHT - 56, 32, 32,
-                RGB565(40, 40, 40));
-  gfx->drawBitmap(SCREEN_WIDTH - 36 + padding(32, ICON_REFRESH_WIDTH),
-                  SCREEN_HEIGHT - 56 + padding(32, ICON_REFRESH_HEIGHT),
-                  ICON_REFRESH, ICON_REFRESH_WIDTH, ICON_REFRESH_HEIGHT, WHITE);
+  const int mins = (arrival->arrivalTimestamp - timeNow) / 60;
+  const uint16_t color = getLoadColor(arrival->load);
 
-  // Settings Button
-  gfx->fillRect(SCREEN_WIDTH - 78, SCREEN_HEIGHT - 56, 32, 32,
-                RGB565(40, 40, 40));
-  gfx->drawBitmap(SCREEN_WIDTH - 78 + padding(32, ICON_COG_WIDTH),
-                  SCREEN_HEIGHT - 56 + padding(32, ICON_COG_HEIGHT), ICON_COG,
-                  ICON_COG_WIDTH, ICON_COG_HEIGHT, WHITE);
-  return this;
-}
+  if (mins <= 0) {
+    gfx->setFont(NULL);
+    gfx->setTextSize(2);
+    gfx->setTextColor(STATUS_ARRIVING);
+    ScreenRenderer::drawText("ARR", x, y + 4);
+    gfx->setTextSize(1);
+    gfx->fillCircle(x + 42, y + 12, 4, STATUS_ARRIVING);
+  } else {
+    gfx->setFont(&Roboto_Mono_Medium_Digits30);
+    gfx->setTextColor(color);
 
-BusArrivalRenderer* BusArrivalRenderer::renderDateTime() {
-  gfx->setTextColor(WHITE);
-  gfx->fillRect(0, SCREEN_HEIGHT - 60, 240, 48, BLACK);
-  gfx->setFont(&Roboto_Mono_Light_32);
-  ScreenRenderer::drawText(TimeUtil::getTimeString(), 12, SCREEN_HEIGHT - 34);
+    String minsStr = String(mins);
+    ScreenRenderer::drawText(minsStr, x, y);
 
-  gfx->setTextSize(2);
-  gfx->setFont(NULL);
-  gfx->setTextColor(MAGENTA);
-  ScreenRenderer::drawText(TimeUtil::getDateString(), 12, SCREEN_HEIGHT - 60);
+    gfx->setFont(NULL);
+    gfx->setTextSize(1);
+    gfx->setTextColor(color);
+    const int labelX = x + (mins >= 10 ? 40 : 24);
+    ScreenRenderer::drawText("min", labelX, y + 12);
+  }
+
   gfx->setTextSize(1);
-
-  return this;
 }
 
-BusArrivalRenderer* BusArrivalRenderer::renderError(const char* message) {
-  // Clear the main content area (preserve toolbar area at bottom)
-  gfx->fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT - 70, BLACK);
+void BusArrivalRenderer::renderBusService(uint8_t position,
+                                          BusArrivalServiceDetail* data) {
+  if (position >= 6) return;
 
-  // Calculate center position for the icon
-  int iconX = (SCREEN_WIDTH - ERROR_ICON_WIDTH) / 2;
-  int iconY = (SCREEN_HEIGHT - 70 - ERROR_ICON_HEIGHT) / 2 - 20;
+  const int col = position % 2;
+  const int row = position / 2;
+  drawCard(cardX[col], cardY[row], data);
+}
 
-  // Draw sad face bitmap in red
+void BusArrivalRenderer::clearContent() {
+  gfx->fillRect(0, CONTENT_TOP, SCREEN_WIDTH, CONTENT_HEIGHT, BG_DARK);
+
+  for (int x = 0; x < SCREEN_WIDTH; x += 40) {
+    gfx->drawFastVLine(x, CONTENT_TOP, CONTENT_HEIGHT, RGB565(12, 12, 18));
+  }
+  for (int y = CONTENT_TOP; y < SCREEN_HEIGHT - FOOTER_HEIGHT; y += 40) {
+    gfx->drawFastHLine(0, y, SCREEN_WIDTH, RGB565(12, 12, 18));
+  }
+}
+
+void BusArrivalRenderer::renderError(const char* message) {
+  clearContent();
+
+  const int centerY = CONTENT_TOP + CONTENT_HEIGHT / 2;
+
+  const int iconX = (SCREEN_WIDTH - ERROR_ICON_WIDTH) / 2;
+  const int iconY = centerY - ERROR_ICON_HEIGHT / 2 - 15;
   gfx->drawBitmap(iconX, iconY, ERROR_ICON_SAD_FACE, ERROR_ICON_WIDTH,
-                  ERROR_ICON_HEIGHT, RED);
+                  ERROR_ICON_HEIGHT, NEON_MAGENTA);
 
-  // Draw error message below the icon
   gfx->setFont(NULL);
   gfx->setTextSize(2);
   gfx->setTextColor(WHITE);
   ScreenRenderer::drawCenterText(message, SCREEN_WIDTH / 2,
-                                 iconY + ERROR_ICON_HEIGHT + 25);
+                                 iconY + ERROR_ICON_HEIGHT + 20);
   gfx->setTextSize(1);
+
+  RendererUtil::drawCornerBrackets(SCREEN_WIDTH / 2 - 100, iconY - 10, 200,
+                                   ERROR_ICON_HEIGHT + 60, NEON_MAGENTA, 15);
+
   finalize();
-  return this;
+}
+
+void BusArrivalRenderer::renderBusStopCode(String busStopCode) {
+  gfx->setFont(NULL);
+  gfx->setTextSize(1);
+  gfx->setTextColor(NEON_CYAN);
+  gfx->fillRect(HEADER_L_BOX_X + 1, HEADER_L_BOX_Y + 1, HEADER_L_BOX_WIDTH - 2,
+                HEADER_L_BOX_HEIGHT - 2, BG_CARD);
+  ScreenRenderer::drawCenterText(busStopCode,
+                                 HEADER_L_BOX_X + (HEADER_L_BOX_WIDTH / 2),
+                                 HEADER_L_BOX_Y + (HEADER_L_BOX_HEIGHT / 2));
 }
 
 void BusArrivalRenderer::finalize() { gfx->flush(); }
 
-String BusArrivalRenderer::toReadableMins(long arrivalTimestamp, long timeNow) {
-  int32_t minsToArrival = (arrivalTimestamp - timeNow) / 60;
-  if (minsToArrival <= 0) {
-    // TODO: Make arriving nicer
-    return "0";
-  }
-  return String(minsToArrival);
+String BusArrivalRenderer::formatMins(long arrivalTimestamp, long timeNow) {
+  int mins = (arrivalTimestamp - timeNow) / 60;
+  if (mins <= 0) return "ARR";
+  if (mins > 99) return "99+";
+  return String(mins);
 }
 
-uint16_t BusArrivalRenderer::resolveLoadColor(BusLoad load) {
+uint16_t BusArrivalRenderer::getLoadColor(BusLoad load) {
   switch (load) {
     case BusLoad::SeatsAvailable:
-      return GREEN;
+      return STATUS_GREEN;
     case BusLoad::StandingAvailable:
-      return YELLOW;
+      return STATUS_YELLOW;
     default:
-      return PALERED;
+      return STATUS_RED;
   }
 }
 
-String BusArrivalRenderer::resolveBusTypeIcon(BusType type) {
+String BusArrivalRenderer::getBusTypeIcon(BusType type) {
   switch (type) {
     case BusType::Bendy:
       return BUS_TYPE_FONT_BENDY;

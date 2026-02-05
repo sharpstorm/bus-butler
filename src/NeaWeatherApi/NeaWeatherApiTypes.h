@@ -51,11 +51,11 @@ struct TwoHourForecastResponse {
 // Period forecast within 24-hour forecast
 struct PeriodForecast {
   String timePeriod;  // "morning", "afternoon", "evening", "night"
-  String regionWest;
-  String regionEast;
-  String regionCentral;
-  String regionSouth;
-  String regionNorth;
+  WeatherCondition regionWest;
+  WeatherCondition regionEast;
+  WeatherCondition regionCentral;
+  WeatherCondition regionSouth;
+  WeatherCondition regionNorth;
 };
 
 // Temperature/humidity range

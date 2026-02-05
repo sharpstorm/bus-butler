@@ -13,7 +13,8 @@
         "string_view": "cpp",
         "initializer_list": "cpp",
         "regex": "cpp",
-        "atomic": "cpp"
+        "atomic": "cpp",
+        "system_error": "cpp"
     },
     "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, indentWidth: 2 }"
 }

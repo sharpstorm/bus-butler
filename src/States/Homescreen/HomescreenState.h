@@ -1,15 +1,27 @@
 #pragma once
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include <memory>
 
 #include "../../LtaDatamallClient/BusArrivalApiTypes.h"
 #include "../../LtaDatamallClient/LtaDatamallClient.h"
+#include "../../NeaWeatherApi/NeaWeatherApiClient.h"
+#include "../../NeaWeatherApi/NeaWeatherApiTypes.h"
 #include "../../Wifi/MDnsClient.h"
 #include "../IAppState.h"
 #include "BusArrivalRenderer.h"
+#include "WeatherRenderer.h"
+
+using namespace std;
+
+// Weather display mode for cycling
+enum class WeatherDisplayMode { TwoHour, TwentyFourHour };
 
 class HomescreenState : public IAppState {
  private:
+  // Bus arrival state
   int32_t lastBusArrivalApiTimestamp = -1;
   int32_t lastBusArrivalPaintTimestamp = -1;
   int32_t lastDateTimePaintTimestamp = -1;
@@ -17,10 +29,32 @@ class HomescreenState : public IAppState {
   BusArrivalRenderer busArrivalRenderer;
   LtaDatamallClient ltaDatamallClient;
 
-  static void queryBusArrivalWorker(void* pvParameters);
+  // Weather state
+  int32_t lastWeatherApiTimestamp = -1;
+  int32_t lastWeatherDisplayToggleTimestamp = -1;
+  unique_ptr<TwoHourForecastResponse> cachedTwoHourForecast = nullptr;
+  unique_ptr<TwentyFourHourForecastResponse> cachedTwentyFourHourForecast =
+      nullptr;
+  NeaWeatherClient neaWeatherClient;
+  WeatherDisplayMode currentWeatherMode = WeatherDisplayMode::TwoHour;
+  WeatherRenderer weatherRenderer;
 
+  // Worker functions
+  static void queryBusArrivalWorker(void* pvParameters);
+  static void queryWeatherWorker(void* pvParameters);
+
+  // Update functions
   void updateBusArrivalCache();
+  void updateWeatherCache();
   void paintBusArrivalCache();
+  void paintWeatherIndicator();
+
+  static constexpr TickType_t API_QUERY_TIMEOUT_TICKS = pdMS_TO_TICKS(15000);
+
+  // Weather refresh interval: 5 minutes
+  static constexpr int32_t WEATHER_REFRESH_INTERVAL_SECS = 300;
+  // Weather display toggle interval: 15 seconds
+  static constexpr int32_t WEATHER_TOGGLE_INTERVAL_SECS = 15;
 
  public:
   void enter();

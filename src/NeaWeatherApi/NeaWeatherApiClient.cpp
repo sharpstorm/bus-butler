@@ -90,19 +90,19 @@ unique_ptr<TwoHourForecastResponse> NeaWeatherClient::getTwoHourForecast() {
   }
 
   JsonObject data = root["data"].as<JsonObject>();
-  if (!data["records"].is<JsonArray>()) {
-    Serial.println("Missing 'records' array");
+  if (!data["items"].is<JsonArray>()) {
+    Serial.println("Missing 'items' array");
     return nullptr;
   }
 
-  JsonArray records = data["records"].as<JsonArray>();
-  if (records.size() == 0) {
-    Serial.println("Empty records array");
+  JsonArray items = data["items"].as<JsonArray>();
+  if (items.size() == 0) {
+    Serial.println("Empty items array");
     return nullptr;
   }
 
   // Get the first (most recent) record
-  JsonObject record = records[0].as<JsonObject>();
+  JsonObject record = items[0].as<JsonObject>();
 
   unique_ptr<TwoHourForecastResponse> resp =
       make_unique<TwoHourForecastResponse>();
@@ -111,12 +111,12 @@ unique_ptr<TwoHourForecastResponse> NeaWeatherClient::getTwoHourForecast() {
   }
 
   // Parse validity period
-  if (record["validPeriod"].is<JsonObject>()) {
-    JsonObject period = record["validPeriod"].as<JsonObject>();
+  if (record["valid_period"].is<JsonObject>()) {
+    JsonObject period = record["valid_period"].as<JsonObject>();
     resp->validFrom = period["start"].as<String>();
     resp->validTo = period["end"].as<String>();
   }
-  resp->updateTimestamp = record["updatedTimestamp"].as<String>();
+  resp->updateTimestamp = record["update_timestamp"].as<String>();
 
   // Parse forecasts
   if (record["forecasts"].is<JsonArray>()) {
@@ -232,11 +232,14 @@ PeriodForecast NeaWeatherClient::parsePeriodForecast(JsonObject& periodObj) {
 
   if (periodObj["regions"].is<JsonObject>()) {
     JsonObject regions = periodObj["regions"].as<JsonObject>();
-    pf.regionWest = regions["west"].as<String>();
-    pf.regionEast = regions["east"].as<String>();
-    pf.regionCentral = regions["central"].as<String>();
-    pf.regionSouth = regions["south"].as<String>();
-    pf.regionNorth = regions["north"].as<String>();
+    pf.regionWest = parseWeatherCondition(regions["west"]["text"].as<String>());
+    pf.regionEast = parseWeatherCondition(regions["east"]["text"].as<String>());
+    pf.regionCentral =
+        parseWeatherCondition(regions["central"]["text"].as<String>());
+    pf.regionSouth =
+        parseWeatherCondition(regions["south"]["text"].as<String>());
+    pf.regionNorth =
+        parseWeatherCondition(regions["north"]["text"].as<String>());
   }
 
   return pf;

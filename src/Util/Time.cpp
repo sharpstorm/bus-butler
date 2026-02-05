@@ -47,7 +47,7 @@ String TimeUtil::getTimeString() {
   int8_t normalizedHour = timeinfo.tm_hour % 12;
   int8_t amPmHour = normalizedHour == 0 ? 12 : normalizedHour;
   String amPm = timeinfo.tm_hour >= 12 ? "pm" : "am";
-  sprintf(buf, "%02d:%02d %s", amPmHour, timeinfo.tm_min, amPm);
+  sprintf(buf, "%02d:%02d%s", amPmHour, timeinfo.tm_min, amPm);
   buf[8] = 0;
   return String(buf);
 }
