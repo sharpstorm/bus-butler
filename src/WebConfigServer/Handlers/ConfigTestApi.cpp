@@ -1,7 +1,9 @@
 #include "ConfigTestApi.h"
 
+#include "../../Config/ConfigManager.h"
 #include "../../Util/Time.h"
 #include "../HttpConstants.h"
+#include "esp_task_wdt.h"
 
 struct QueryBusArrivalWorkerDto {
   String busStopCode;
@@ -46,6 +48,7 @@ void ConfigTestApi::queryBusArrival(AsyncWebServerRequest* request,
   while (!queryBusArrivalCompleted) {
     // Yield to not trigger watchdog
     vTaskDelay(pdMS_TO_TICKS(10));
+    esp_task_wdt_reset();
   }
 
   if (taskResult.apiResp == nullptr) {
@@ -110,3 +113,133 @@ bool ConfigTestApi::initDatamallClient() {
 
 LtaDatamallClient ConfigTestApi::ltaDatamallClient;
 volatile bool ConfigTestApi::queryBusArrivalCompleted = true;
+
+// Weather Query Implementation
+struct QueryWeatherWorkerDto {
+  String town;
+  String region;
+  unique_ptr<TwoHourForecastResponse> twoHourForecast;
+  unique_ptr<TwentyFourHourForecastResponse> twentyFourHourForecast;
+  volatile bool isCompleted;
+};
+
+void ConfigTestApi::queryWeatherWorker(void* pvParameters) {
+  QueryWeatherWorkerDto* dtoPtr = (QueryWeatherWorkerDto*)(pvParameters);
+
+  dtoPtr->twoHourForecast = weatherClient.getTwoHourForecast();
+  esp_task_wdt_reset();
+  dtoPtr->twentyFourHourForecast = weatherClient.getTwentyFourHourForecast();
+  esp_task_wdt_reset();
+  dtoPtr->isCompleted = true;
+  vTaskDelete(NULL);
+}
+
+void ConfigTestApi::queryWeather(AsyncWebServerRequest* request) {
+  if (!queryWeatherCompleted) {
+    request->send(422, MimeType::JSON,
+                  "{ \"error\": \"API Request in flight\" }");
+    return;
+  }
+
+  String town = configManager.getWeatherTown();
+  String region = configManager.getWeatherRegion();
+
+  if (town.length() == 0 || region.length() == 0) {
+    request->send(422, MimeType::JSON,
+                  "{ \"error\": \"Weather town or region not configured\" }");
+    return;
+  }
+
+  TaskHandle_t taskRef = NULL;
+  QueryWeatherWorkerDto taskResult{town, region, nullptr, nullptr, false};
+
+  xTaskCreate(queryWeatherWorker, "query-weather-worker", 8000, &taskResult, 1,
+              &taskRef);
+
+  while (!taskResult.isCompleted) {
+    // Yield to not trigger watchdog
+    vTaskDelay(pdMS_TO_TICKS(20));
+    esp_task_wdt_reset();
+  }
+
+  if (taskResult.twoHourForecast == nullptr ||
+      taskResult.twentyFourHourForecast == nullptr) {
+    request->send(500, MimeType::JSON,
+                  "{ \"error\": \"API Call to weather service failed\" }");
+    return;
+  }
+
+  // Serialize Response
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+  root["town"] = town;
+  root["region"] = region;
+
+  // Two Hour Forecast
+  JsonObject twoHour = root["twoHourForecast"].to<JsonObject>();
+  WeatherCondition townForecast =
+      weatherClient.getForecastForArea(taskResult.twoHourForecast.get(), town);
+  twoHour["forecast"] = weatherConditionToString(townForecast);
+
+  // Twenty Four Hour Forecast
+  JsonObject twentyFourHour = root["twentyFourHourForecast"].to<JsonObject>();
+  TwentyFourHourForecastResponse* tfResp =
+      taskResult.twentyFourHourForecast.get();
+
+  JsonArray periods = twentyFourHour["periods"].to<JsonArray>();
+
+  // Morning period
+  JsonObject morningObj = periods.add<JsonObject>();
+  morningObj["timePeriod"] = "Morning";
+  WeatherCondition morningForecast = WeatherCondition::Unknown;
+  if (region == "west")
+    morningForecast = tfResp->morning.regionWest;
+  else if (region == "east")
+    morningForecast = tfResp->morning.regionEast;
+  else if (region == "central")
+    morningForecast = tfResp->morning.regionCentral;
+  else if (region == "south")
+    morningForecast = tfResp->morning.regionSouth;
+  else if (region == "north")
+    morningForecast = tfResp->morning.regionNorth;
+  morningObj["forecast"] = weatherConditionToString(morningForecast);
+
+  // Afternoon period
+  JsonObject afternoonObj = periods.add<JsonObject>();
+  afternoonObj["timePeriod"] = "Afternoon";
+  WeatherCondition afternoonForecast = WeatherCondition::Unknown;
+  if (region == "west")
+    afternoonForecast = tfResp->afternoon.regionWest;
+  else if (region == "east")
+    afternoonForecast = tfResp->afternoon.regionEast;
+  else if (region == "central")
+    afternoonForecast = tfResp->afternoon.regionCentral;
+  else if (region == "south")
+    afternoonForecast = tfResp->afternoon.regionSouth;
+  else if (region == "north")
+    afternoonForecast = tfResp->afternoon.regionNorth;
+  afternoonObj["forecast"] = weatherConditionToString(afternoonForecast);
+
+  // Night period
+  JsonObject nightObj = periods.add<JsonObject>();
+  nightObj["timePeriod"] = "Night";
+  WeatherCondition nightForecast = WeatherCondition::Unknown;
+  if (region == "west")
+    nightForecast = tfResp->night.regionWest;
+  else if (region == "east")
+    nightForecast = tfResp->night.regionEast;
+  else if (region == "central")
+    nightForecast = tfResp->night.regionCentral;
+  else if (region == "south")
+    nightForecast = tfResp->night.regionSouth;
+  else if (region == "north")
+    nightForecast = tfResp->night.regionNorth;
+  nightObj["forecast"] = weatherConditionToString(nightForecast);
+
+  AsyncResponseStream* response = request->beginResponseStream(MimeType::JSON);
+  serializeJson(root, *response);
+  request->send(response);
+}
+
+NeaWeatherClient ConfigTestApi::weatherClient;
+volatile bool ConfigTestApi::queryWeatherCompleted = true;

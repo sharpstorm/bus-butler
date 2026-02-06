@@ -6,11 +6,13 @@
 #include <ESPAsyncWebServer.h>
 
 #include "../../LtaDatamallClient/LtaDatamallClient.h"
+#include "../../NeaWeatherApi/NeaWeatherApiClient.h"
 
 class ConfigTestApi {
  public:
   static void queryBusArrival(AsyncWebServerRequest* request,
                               JsonVariant& json);
+  static void queryWeather(AsyncWebServerRequest* request);
 
  private:
   static LtaDatamallClient ltaDatamallClient;
@@ -22,4 +24,9 @@ class ConfigTestApi {
   static void formatBusResponse(const JsonObject& output,
                                 const BusArrivalDetail& arrivalDetails,
                                 long timeNow);
+
+  // Weather API
+  static NeaWeatherClient weatherClient;
+  static volatile bool queryWeatherCompleted;
+  static void queryWeatherWorker(void* pvParameters);
 };

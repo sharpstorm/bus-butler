@@ -1,10 +1,5 @@
-export type AppState = 'setup' | 'config' | 'loading'
-
-const stateToContainerIdMap: Record<AppState, string> = {
-  loading: 'state-loading',
-  setup: 'state-setup',
-  config: 'state-config',
-}
+export const APP_STATES = ['loading', 'setup', 'config', 'dashboard'] as const
+export type AppState = typeof APP_STATES[number]
 
 export type AppStateStore = {
   state: AppState
@@ -17,11 +12,10 @@ export const appState: AppStateStore = {
 export const setAppState = (newState: AppState) => {
   appState.state = newState
 
-  Object.entries(stateToContainerIdMap).forEach(([k, v]) => {
-    if (k === newState) {
-      document.getElementById(v)?.classList.remove('hidden')
-    } else {
-      document.getElementById(v)?.classList.add('hidden')
+  APP_STATES.forEach((state) => {
+    const element = document.getElementById(`state-${state}`)
+    if (element) {
+      element.classList.toggle('hidden', state !== newState)
     }
   })
 }

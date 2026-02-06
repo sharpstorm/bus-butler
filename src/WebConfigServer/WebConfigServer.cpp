@@ -43,6 +43,7 @@ WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
             WeatherConfigApi::listWeatherTowns);
 
   server.on("/api/test/bus-arrival", HTTP_POST, ConfigTestApi::queryBusArrival);
+  server.on("/api/test/weather", HTTP_POST, ConfigTestApi::queryWeather);
 }
 
 void WebConfigServer::start() { server.begin(); }
