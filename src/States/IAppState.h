@@ -14,6 +14,7 @@ enum AppState {
   Boot,
   Setup,
   Homescreen,
+  Settings,
 };
 
 class IAppStateResolver {

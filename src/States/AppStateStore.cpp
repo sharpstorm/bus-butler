@@ -14,6 +14,8 @@ IAppState* AppStateStore::getStateRefById(AppState state) {
       return &setupState;
     case AppState::Homescreen:
       return &homescreenState;
+    case AppState::Settings:
+      return &settingsState;
     default:
       return nullptr;
   }

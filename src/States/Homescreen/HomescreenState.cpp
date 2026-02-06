@@ -5,6 +5,7 @@
 #include "../../Screen/Fonts/BusTypes.h"
 #include "../../Screen/Screen.h"
 #include "../../Util/Time.h"
+#include "../AppStateManager.h"
 #include "LayoutRenderer.h"
 
 #define TEST_BUS_STOP_CODE "22361"
@@ -99,6 +100,7 @@ void HomescreenState::handleTouch(int x, int y) {
   }
   // Settings button
   else if (isInHitbox(x, y, SCREEN_WIDTH - 80, SCREEN_HEIGHT - 50, 32, 32)) {
+    appStateManager.changeState(AppState::Settings);
   }
   // Weather area tap - toggle display mode
   else if (isInHitbox(x, y, 150, SCREEN_HEIGHT - FOOTER_HEIGHT, 230,

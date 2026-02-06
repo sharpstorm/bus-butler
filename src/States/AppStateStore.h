@@ -3,6 +3,7 @@
 #include "Boot/BootState.h"
 #include "Homescreen/HomescreenState.h"
 #include "IAppState.h"
+#include "Settings/SettingsState.h"
 #include "Setup/SetupState.h"
 
 /*
@@ -14,6 +15,7 @@ class AppStateStore : public IAppStateResolver {
   BootState bootState;
   SetupState setupState;
   HomescreenState homescreenState;
+  SettingsState settingsState;
 
  public:
   AppStateStore();
