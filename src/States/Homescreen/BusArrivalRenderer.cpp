@@ -36,6 +36,7 @@ void BusArrivalRenderer::drawCard(int16_t x, int16_t y,
       all_of(serviceNo->begin(), serviceNo->end(), ::isdigit);
 
   gfx->setFont(isNumeric ? &Roboto_Mono_Light_Digits40 : &Roboto_Mono_Light_32);
+  gfx->setTextSize(1);
   gfx->setTextColor(WHITE);
   ScreenRenderer::drawCenterText(*serviceNo, x + 2 + serviceBoxW / 2,
                                  y + BUS_ARRIVAL_CARD_HEIGHT / 2);
@@ -57,6 +58,7 @@ void BusArrivalRenderer::drawCard(int16_t x, int16_t y,
   }
 
   gfx->setFont(&BusTypesFont);
+  gfx->setTextSize(1);
   gfx->setTextColor(NEON_BLUE);
 
   if (data->nextBus.arrivalTimestamp > 0) {
@@ -93,6 +95,7 @@ void BusArrivalRenderer::drawArrivalTime(int16_t x, int16_t y,
     gfx->fillCircle(x + 42, y + 12, 4, STATUS_ARRIVING);
   } else {
     gfx->setFont(&Roboto_Mono_Medium_Digits30);
+    gfx->setTextSize(1);
     gfx->setTextColor(color);
 
     String minsStr = String(mins);

@@ -93,13 +93,12 @@ void HomescreenState::loop() {
 
 void HomescreenState::handleTouch(int x, int y) {
   // Refresh button
-  if (isInHitbox(x, y, SCREEN_WIDTH - 40, SCREEN_HEIGHT - 42, 32, 32)) {
+  if (isInHitbox(x, y, SCREEN_WIDTH - 40, SCREEN_HEIGHT - 50, 32, 32)) {
     lastBusArrivalApiTimestamp = 0;
     lastWeatherApiTimestamp = 0;
   }
   // Settings button
-  else if (isInHitbox(x, y, SCREEN_WIDTH - 80, SCREEN_HEIGHT - 42, 32, 32)) {
-    // TODO: Settings action
+  else if (isInHitbox(x, y, SCREEN_WIDTH - 80, SCREEN_HEIGHT - 50, 32, 32)) {
   }
   // Weather area tap - toggle display mode
   else if (isInHitbox(x, y, 150, SCREEN_HEIGHT - FOOTER_HEIGHT, 230,
