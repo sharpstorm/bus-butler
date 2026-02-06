@@ -36,4 +36,9 @@ void loop() {
   }
 
   activeState->loop();
+
+  // Self-Reset Routine after 30 days
+  if (millis() > 2592000000l) {
+    ESP.restart();
+  }
 }
