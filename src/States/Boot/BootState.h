@@ -9,6 +9,8 @@ class BootState : public IAppState {
  private:
   BootScreenRenderer renderer;
 
+  bool isInternetConnected();
+
  public:
   void enter();
   void loop();
