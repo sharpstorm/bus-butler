@@ -2,7 +2,7 @@
 
 #include "Arduino.h"
 
-#define NTP_SERVER "time1.google.com"
+#define NTP_SERVER "time.google.com"
 #define GMT_OFFSET_SECS 28800
 #define MINUTE 60
 #define HOUR (60 * 60)

@@ -5,8 +5,8 @@
 #include "WifiConfigManager.h"
 
 // Reliable public DNS servers
-static const IPAddress DNS_PRIMARY(8, 8, 8, 8);    // Google
-static const IPAddress DNS_SECONDARY(1, 1, 1, 1);  // Cloudflare
+static const IPAddress DNS_PRIMARY(1, 1, 1, 1);    // CloudFlare
+static const IPAddress DNS_SECONDARY(8, 8, 8, 8);  // Google
 
 WifiManager::WifiManager() {
   // Compute hotspot SSID
