@@ -21,10 +21,12 @@ enum class WeatherDisplayMode { TwoHour, TwentyFourHour };
 
 class HomescreenState : public IAppState {
  private:
+  int32_t lastDateTimePaintTimestamp = -1;
+
   // Bus arrival state
   int32_t lastBusArrivalApiTimestamp = -1;
   int32_t lastBusArrivalPaintTimestamp = -1;
-  int32_t lastDateTimePaintTimestamp = -1;
+  bool isBusArrivalFetchInProgress = false;
   unique_ptr<BusArrivalApiResponse> cachedBusArrival = nullptr;
   BusArrivalRenderer busArrivalRenderer;
   LtaDatamallClient ltaDatamallClient;
@@ -32,6 +34,7 @@ class HomescreenState : public IAppState {
   // Weather state
   int32_t lastWeatherApiTimestamp = -1;
   int32_t lastWeatherDisplayToggleTimestamp = -1;
+  bool isWeatherFetchInProgress = false;
   unique_ptr<TwoHourForecastResponse> cachedTwoHourForecast = nullptr;
   unique_ptr<TwentyFourHourForecastResponse> cachedTwentyFourHourForecast =
       nullptr;

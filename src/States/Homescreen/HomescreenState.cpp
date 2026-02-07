@@ -14,22 +14,27 @@ using namespace std;
 
 struct QueryBusArrivalWorkerDto {
   String busStopCode;
-  unique_ptr<BusArrivalApiResponse> apiResp;
+  unique_ptr<BusArrivalApiResponse>* cachedBusArrivalPtr;
+  int32_t* lastBusArrivalApiTimestampPtr;
+  bool* isBusArrivalFetchInProgressPtr;
   LtaDatamallClient* client;
-  volatile bool isCompleted;
 };
 
 struct WeatherQueryDto {
   NeaWeatherClient* client;
-  unique_ptr<TwoHourForecastResponse> twoHourResponse;
-  unique_ptr<TwentyFourHourForecastResponse> twentyFourHourResponse;
   bool queryTwoHour;
   bool queryTwentyFourHour;
-  volatile bool isCompleted;
+  unique_ptr<TwoHourForecastResponse>* twoHourResponsePtr;
+  unique_ptr<TwentyFourHourForecastResponse>* twentyFourHourResponsePtr;
+  int32_t* lastWeatherApiTimestampPtr;
+  bool* isWeatherFetchInProgressPtr;
 };
 
 void HomescreenState::enter() {
   gfx->fillScreen(BG_DARK);
+  LayoutRenderer::renderHeader();
+  LayoutRenderer::renderFooter();
+  gfx->flush();
 
   lastBusArrivalApiTimestamp = -1;
   lastBusArrivalPaintTimestamp = -1;
@@ -56,7 +61,8 @@ void HomescreenState::loop() {
   long timeNow = TimeUtil::getUnixTime();
 
   // Refresh bus data every 60 seconds
-  if (timeNow - lastBusArrivalApiTimestamp > 60) {
+  if (timeNow - lastBusArrivalApiTimestamp > 60 &&
+      !isBusArrivalFetchInProgress) {
     updateBusArrivalCache();
     paintBusArrivalCache();
   }
@@ -67,7 +73,8 @@ void HomescreenState::loop() {
   }
 
   // Refresh weather data every 5 minutes
-  if (timeNow - lastWeatherApiTimestamp > WEATHER_REFRESH_INTERVAL_SECS) {
+  if (timeNow - lastWeatherApiTimestamp > WEATHER_REFRESH_INTERVAL_SECS &&
+      !isWeatherFetchInProgress) {
     updateWeatherCache();
     paintWeatherIndicator();
     busArrivalRenderer.finalize();
@@ -116,9 +123,12 @@ void HomescreenState::handleTouch(int x, int y) {
 
 void HomescreenState::queryBusArrivalWorker(void* pvParameters) {
   QueryBusArrivalWorkerDto* dtoPtr = (QueryBusArrivalWorkerDto*)(pvParameters);
-  dtoPtr->apiResp = dtoPtr->client->getBusArrival(dtoPtr->busStopCode);
-  dtoPtr->isCompleted = true;
+  *dtoPtr->cachedBusArrivalPtr =
+      dtoPtr->client->getBusArrival(dtoPtr->busStopCode);
+  *dtoPtr->lastBusArrivalApiTimestampPtr = TimeUtil::getUnixTime();
+  *dtoPtr->isBusArrivalFetchInProgressPtr = false;
 
+  delete dtoPtr;
   vTaskDelete(NULL);
 }
 
@@ -126,14 +136,17 @@ void HomescreenState::queryWeatherWorker(void* pvParameters) {
   WeatherQueryDto* dtoPtr = (WeatherQueryDto*)(pvParameters);
 
   if (dtoPtr->queryTwoHour) {
-    dtoPtr->twoHourResponse = dtoPtr->client->getTwoHourForecast();
+    *dtoPtr->twoHourResponsePtr = dtoPtr->client->getTwoHourForecast();
   }
+
   if (dtoPtr->queryTwentyFourHour) {
-    dtoPtr->twentyFourHourResponse =
+    *dtoPtr->twentyFourHourResponsePtr =
         dtoPtr->client->getTwentyFourHourForecast();
   }
-  dtoPtr->isCompleted = true;
+  *dtoPtr->lastWeatherApiTimestampPtr = TimeUtil::getUnixTime();
+  *dtoPtr->isWeatherFetchInProgressPtr = false;
 
+  delete dtoPtr;
   vTaskDelete(NULL);
 }
 
@@ -149,73 +162,60 @@ void HomescreenState::updateBusArrivalCache() {
     busArrivalRenderer.clearContent();
   }
 
-  QueryBusArrivalWorkerDto taskResult{busStopCode, nullptr, &ltaDatamallClient,
-                                      false};
+  isBusArrivalFetchInProgress = true;
+  auto taskParams = new QueryBusArrivalWorkerDto{
+      busStopCode, &cachedBusArrival, &lastBusArrivalApiTimestamp,
+      &isBusArrivalFetchInProgress, &ltaDatamallClient};
   TaskHandle_t taskHandle = NULL;
   BaseType_t taskCreated = xTaskCreate(queryBusArrivalWorker, "homescreen-bus",
-                                       8192, &taskResult, 1, &taskHandle);
+                                       8192, taskParams, 1, &taskHandle);
 
   if (taskCreated != pdPASS) {
+    delete taskParams;
+    isBusArrivalFetchInProgress = false;
     Serial.println("Failed to create bus arrival query task");
     busArrivalRenderer.renderError("Task create failed");
-    return;
-  }
-
-  while (!taskResult.isCompleted) {
-    vTaskDelay(pdMS_TO_TICKS(10));
-  }
-
-  cachedBusArrival = move(taskResult.apiResp);
-  lastBusArrivalApiTimestamp = TimeUtil::getUnixTime();
-
-  if (cachedBusArrival == nullptr) {
-    busArrivalRenderer.renderError("API request failed");
   }
 }
 
 void HomescreenState::updateWeatherCache() {
-  WeatherQueryDto taskResult{
-      &neaWeatherClient, nullptr, nullptr, true, true, false};
+  auto taskParams = new WeatherQueryDto{&neaWeatherClient,
+                                        true,
+                                        true,
+                                        &cachedTwoHourForecast,
+                                        &cachedTwentyFourHourForecast,
+                                        &lastWeatherApiTimestamp,
+                                        &isWeatherFetchInProgress};
+  isWeatherFetchInProgress = true;
   TaskHandle_t taskHandle = NULL;
   BaseType_t taskCreated = xTaskCreate(queryWeatherWorker, "homescreen-weather",
-                                       8192, &taskResult, 1, &taskHandle);
+                                       8192, taskParams, 1, &taskHandle);
 
   if (taskCreated != pdPASS) {
     Serial.println("Failed to create weather query task");
+    delete taskParams;
+    isWeatherFetchInProgress = false;
     lastWeatherApiTimestamp = TimeUtil::getUnixTime();
-    return;
   }
-
-  while (!taskResult.isCompleted) {
-    vTaskDelay(pdMS_TO_TICKS(10));
-  }
-
-  if (taskResult.twoHourResponse != nullptr) {
-    cachedTwoHourForecast = move(taskResult.twoHourResponse);
-  }
-  if (taskResult.twentyFourHourResponse != nullptr) {
-    cachedTwentyFourHourForecast = move(taskResult.twentyFourHourResponse);
-  }
-  lastWeatherApiTimestamp = TimeUtil::getUnixTime();
 }
 
 void HomescreenState::paintBusArrivalCache() {
+  busArrivalRenderer.clearContent();
   if (cachedBusArrival == nullptr) {
+    // Paint from settings
+    busArrivalRenderer.renderBusStopCode(configManager.getBusStopCode());
     lastBusArrivalPaintTimestamp = TimeUtil::getUnixTime();
+    if (lastBusArrivalApiTimestamp > 0) {
+      busArrivalRenderer.renderError("API request failed");
+    }
     return;
   }
 
-  busArrivalRenderer.clearContent();
+  busArrivalRenderer.renderBusStopCode(cachedBusArrival->busStopCode);
   int numServices = min(6, (int)cachedBusArrival->services.size());
   for (int i = 0; i < numServices; i++) {
     busArrivalRenderer.renderBusService(i, &cachedBusArrival->services[i]);
   }
-
-  LayoutRenderer::renderHeader();
-  busArrivalRenderer.renderBusStopCode(cachedBusArrival->busStopCode);
-  LayoutRenderer::renderFooter();
-  LayoutRenderer::renderDateTime();
-  paintWeatherIndicator();
 
   busArrivalRenderer.finalize();
   lastBusArrivalPaintTimestamp = TimeUtil::getUnixTime();

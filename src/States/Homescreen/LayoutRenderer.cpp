@@ -71,7 +71,7 @@ void LayoutRenderer::renderDateTime() {
 
   // Clear date/time area only
   gfx->fillRect(FOOTER_PADDING_X, footerY + 4, FOOTER_DATE_TIME_WIDTH,
-                FOOTER_HEIGHT - 8, BG_PANEL);
+                FOOTER_HEIGHT - 4, BG_PANEL);
 
   gfx->setFont(&Roboto_Mono_Light_32);
   gfx->setTextColor(WHITE);

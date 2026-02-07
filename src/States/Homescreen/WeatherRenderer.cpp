@@ -119,7 +119,7 @@ void WeatherRenderer::renderWeatherIndicator(WeatherCondition condition,
   int weatherW = 220;
 
   // Clear weather area
-  gfx->fillRect(weatherX, footerY + 4, weatherW, FOOTER_HEIGHT - 8, BG_PANEL);
+  gfx->fillRect(weatherX, footerY + 4, weatherW, FOOTER_HEIGHT - 4, BG_PANEL);
 
   // Separator line
   gfx->drawFastVLine(weatherX, footerY + 8, FOOTER_HEIGHT - 16, GRAY_MID);
@@ -165,7 +165,7 @@ void WeatherRenderer::renderWeatherError(const char* errorText) {
   int weatherX = 168;
   int weatherW = 220;
 
-  gfx->fillRect(weatherX, footerY + 4, weatherW, FOOTER_HEIGHT - 8, BG_PANEL);
+  gfx->fillRect(weatherX, footerY + 4, weatherW, FOOTER_HEIGHT - 4, BG_PANEL);
   gfx->drawFastVLine(weatherX - 5, footerY + 8, FOOTER_HEIGHT - 16, GRAY_MID);
 
   // "?" indicator
