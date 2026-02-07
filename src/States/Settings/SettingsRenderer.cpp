@@ -73,7 +73,7 @@ void SettingsRenderer::clearSyncTimeStatus() {
 
 void SettingsRenderer::renderSyncTimeStatus(String message, bool syncSuccess) {
   gfx->fillRect(CONTENT_PADDING_X - 10, SYNC_BUTTON_Y + BUTTON_HEIGHT + 1,
-                CONTENT_WIDTH + 20, 60, BG_DARK);
+                CONTENT_WIDTH + 20, 30, BG_DARK);
 
   if (message.length() <= 0) {
     return;
