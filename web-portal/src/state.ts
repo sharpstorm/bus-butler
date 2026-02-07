@@ -1,5 +1,10 @@
-export const APP_STATES = ['loading', 'setup', 'config', 'dashboard'] as const
-export type AppState = typeof APP_STATES[number]
+export const APP_STATES = [
+  'loading',
+  'setup',
+  'setup-complete',
+  'dashboard',
+] as const
+export type AppState = (typeof APP_STATES)[number]
 
 export type AppStateStore = {
   state: AppState

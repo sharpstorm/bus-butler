@@ -1,436 +1,670 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles/theme.css" />
+    <link rel="stylesheet" href="styles/hero.css" />
+    <link rel="stylesheet" href="styles/navbar.css" />
+    <link rel="stylesheet" href="styles/buttons.css" />
+    <link rel="stylesheet" href="styles/loader.css" />
+    <link rel="stylesheet" href="styles/utils.css" />
+    <link rel="stylesheet" href="styles/input.css" />
+    <link rel="stylesheet" href="styles/list.css" />
+    <link rel="stylesheet" href="app.css" />
+    <title>Bus Butler Setup</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles/theme.css">
-  <link rel="stylesheet" href="styles/hero.css">
-  <link rel="stylesheet" href="styles/navbar.css">
-  <link rel="stylesheet" href="styles/buttons.css">
-  <link rel="stylesheet" href="styles/loader.css">
-  <link rel="stylesheet" href="styles/utils.css">
-  <link rel="stylesheet" href="styles/input.css">
-  <link rel="stylesheet" href="styles/list.css">
-  <link rel="stylesheet" href="app.css">
-  <title>Bus Butler Setup</title>
-</head>
+  <body>
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+      <svg
+        class="sun-icon"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="5" />
+        <line x1="12" y1="1" x2="12" y2="3" />
+        <line x1="12" y1="21" x2="12" y2="23" />
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+        <line x1="1" y1="12" x2="3" y2="12" />
+        <line x1="21" y1="12" x2="23" y2="12" />
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+      </svg>
+      <svg
+        class="moon-icon"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+      </svg>
+    </button>
 
-<body>
-  <!-- Theme Toggle Button -->
-  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
-    <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="5" />
-      <line x1="12" y1="1" x2="12" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="23" />
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-      <line x1="1" y1="12" x2="3" y2="12" />
-      <line x1="21" y1="12" x2="23" y2="12" />
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-    </svg>
-    <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  </button>
-
-  <!-- Loading State -->
-  <div id="state-loading" class="app-state">
-    <div class="loading-container">
-      <div class="loading-spinner">
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-      </div>
-      <h2 class="loading-text">Setting things up...</h2>
-    </div>
-  </div>
-
-  <!-- Setup State -->
-  <div id="state-setup" class="hero hidden app-state">
-    <!-- Progress Indicator -->
-    <div class="progress-indicator">
-      <div class="progress-step" data-step="1">
-        <div class="progress-circle">
-          <span>1</span>
+    <!-- Loading State -->
+    <div id="state-loading" class="app-state">
+      <div class="loading-container">
+        <div class="loading-spinner">
+          <div class="spinner-ring"></div>
+          <div class="spinner-ring"></div>
+          <div class="spinner-ring"></div>
         </div>
-        <div class="progress-label">Welcome</div>
-      </div>
-      <div class="progress-line"></div>
-      <div class="progress-step" data-step="2">
-        <div class="progress-circle">
-          <span>2</span>
-        </div>
-        <div class="progress-label">WiFi</div>
-      </div>
-      <div class="progress-line"></div>
-      <div class="progress-step" data-step="3">
-        <div class="progress-circle">
-          <span>3</span>
-        </div>
-        <div class="progress-label">API</div>
+        <h2 class="loading-text">Setting things up...</h2>
       </div>
     </div>
 
-    <!-- Setup Screen 1: Welcome -->
-    <div id="setup-screen-1" class="setup-screen hero-content hidden">
-      <div class="setup-card fade-in">
-        <div class="emoji-bounce">👋</div>
-        <h1 class="hero-title">Welcome!</h1>
-        <p class="hero-subtitle">
-          Let's get your device configured in just a few steps
-        </p>
-        <p class="setup-description">
-          Connect to WiFi and set up your API token for LTA's DataMall API.<br />We will use this for real-time bus
-          arrival
-          information.
-        </p>
-        <div class="hero-action">
-          <button class="btn btn-primary btn-lg" id="setup-screen-1-continue-btn">
-            Get Started
-            <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
+    <!-- Setup State -->
+    <div id="state-setup" class="hero hidden app-state">
+      <!-- Progress Indicator -->
+      <div class="progress-indicator">
+        <div class="progress-step" data-step="1">
+          <div class="progress-circle">
+            <span>1</span>
+          </div>
+          <div class="progress-label">Welcome</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step" data-step="2">
+          <div class="progress-circle">
+            <span>2</span>
+          </div>
+          <div class="progress-label">WiFi</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step" data-step="3">
+          <div class="progress-circle">
+            <span>3</span>
+          </div>
+          <div class="progress-label">API</div>
         </div>
       </div>
-    </div>
 
-    <!-- Setup Screen 2: WiFi Configuration -->
-    <div id="setup-screen-2" class="setup-screen hero-content hidden">
-      <div class="setup-card fade-in">
-        <div class="icon-wrapper">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-            <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-            <line x1="12" y1="20" x2="12.01" y2="20" />
-          </svg>
-        </div>
-        <h1 class="hero-title">Connect to WiFi</h1>
-        <p class="hero-subtitle">
-          Select your network from the list below
-        </p>
-
-        <div class="form-container">
-          <div class="wifi-list-container">
-            <div id="setup-screen-2-wifi-list" class="list wifi-list">
-            </div>
-            <div class="scanning-indicator">
-              <div class="pulse-dot"></div>
-              <span>Scanning for networks...</span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="setup-screen-2-passphrase-inp" class="form-label">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              Password
-            </label>
-            <input id="setup-screen-2-passphrase-inp" class="input" type="password" placeholder="Enter network password"
-              autocomplete="off" />
-          </div>
-        </div>
-
-        <div class="hero-action">
-          <button id="setup-screen-2-continue-btn" class="btn btn-primary btn-lg">
-            Connect
-            <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Setup Screen 3: API Configuration -->
-    <div id="setup-screen-3" class="setup-screen hero-content hidden">
-      <div class="setup-card fade-in">
-        <div class="icon-wrapper">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path
-              d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-          </svg>
-        </div>
-        <h1 class="hero-title">LTA DataMall Setup</h1>
-        <p class="hero-subtitle">
-          Connect to Singapore's bus arrival data
-        </p>
-
-        <div class="form-container">
-          <div class="info-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
-            <div>
-              <strong>Need an API key?</strong>
-              <p>Get your free API key from <a
-                  href="https://datamall.lta.gov.sg/content/datamall/en/request-for-api.html" target="_blank"
-                  class="link">LTA DataMall</a></p>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="setup-screen-3-apikey-inp" class="form-label">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path
-                  d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-              </svg>
-              API Key
-            </label>
-            <input id="setup-screen-3-apikey-inp" class="input" type="text"
-              placeholder="Enter your LTA DataMall API key" autocomplete="off" />
-          </div>
-        </div>
-
-        <div class="hero-action">
-          <button id="setup-screen-3-continue-btn" class="btn btn-primary btn-lg">
-            Complete Setup
-            <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Config Complete State -->
-  <div id="state-config" class="hidden app-state">
-    <div class="completion-container">
-      <div class="completion-card fade-in">
-        <div class="success-checkmark">
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-        </div>
-        <h1 class="completion-title">All Set! 🎉</h1>
-        <p class="completion-subtitle">
-          Your Bus Butler is ready to provide real-time bus arrival information
-        </p>
-        <div class="completion-details">
-          <div class="detail-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <span>WiFi Connected</span>
-          </div>
-          <div class="detail-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <span>API Configured</span>
-          </div>
-        </div>
-        <div class="hero-action" style="margin-top: 2rem;">
-          <button class="btn btn-primary btn-lg" id="open-dashboard-btn">
-            Open Dashboard
-            <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Dashboard State -->
-  <div id="state-dashboard" class="hidden app-state">
-    <div class="dashboard-container">
-      <div class="dashboard-header">
-        <h1 class="dashboard-title">Bus Butler Dashboard</h1>
-        <p class="dashboard-subtitle">Configure and test your device</p>
-      </div>
-
-      <!-- Tab Navigation -->
-      <div class="tab-navigation">
-        <button class="tab-btn active" data-tab="settings">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-            <path
-              d="M12 16c2.206 0 4-1.794 4-4s-1.794-4-4-4-4 1.794-4 4 1.794 4 4 4zm0-6c1.084 0 2 .916 2 2s-.916 2-2 2-2-.916-2-2 .916-2 2-2z">
-            </path>
-            <path
-              d="m2.845 16.136 1 1.73c.531.917 1.809 1.261 2.73.73l.529-.306A8.1 8.1 0 0 0 9 19.402V20c0 1.103.897 2 2 2h2c1.103 0 2-.897 2-2v-.598a8.132 8.132 0 0 0 1.896-1.111l.529.306c.923.53 2.198.188 2.731-.731l.999-1.729a2.001 2.001 0 0 0-.731-2.732l-.505-.292a7.718 7.718 0 0 0 0-2.224l.505-.292a2.002 2.002 0 0 0 .731-2.732l-.999-1.729c-.531-.92-1.808-1.265-2.731-.732l-.529.306A8.1 8.1 0 0 0 15 4.598V4c0-1.103-.897-2-2-2h-2c-1.103 0-2 .897-2 2v.598a8.132 8.132 0 0 0-1.896 1.111l-.529-.306c-.924-.531-2.2-.187-2.731.732l-.999 1.729a2.001 2.001 0 0 0 .731 2.732l.505.292a7.683 7.683 0 0 0 0 2.223l-.505.292a2.003 2.003 0 0 0-.731 2.733zm3.326-2.758A5.703 5.703 0 0 1 6 12c0-.462.058-.926.17-1.378a.999.999 0 0 0-.47-1.108l-1.123-.65.998-1.729 1.145.662a.997.997 0 0 0 1.188-.142 6.071 6.071 0 0 1 2.384-1.399A1 1 0 0 0 11 5.3V4h2v1.3a1 1 0 0 0 .708.956 6.083 6.083 0 0 1 2.384 1.399.999.999 0 0 0 1.188.142l1.144-.661 1 1.729-1.124.649a1 1 0 0 0-.47 1.108c.112.452.17.916.17 1.378 0 .461-.058.925-.171 1.378a1 1 0 0 0 .471 1.108l1.123.649-.998 1.729-1.145-.661a.996.996 0 0 0-1.188.142 6.071 6.071 0 0 1-2.384 1.399A1 1 0 0 0 13 18.7l.002 1.3H11v-1.3a1 1 0 0 0-.708-.956 6.083 6.083 0 0 1-2.384-1.399.992.992 0 0 0-1.188-.141l-1.144.662-1-1.729 1.124-.651a1 1 0 0 0 .471-1.108z">
-            </path>
-          </svg>
-          Settings
-        </button>
-        <button class="tab-btn" data-tab="bus">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-            <path
-              d="M21.004 7.975V6c0-2.206-1.794-4-4-4h-10c-2.206 0-4 1.794-4 4v1.998l-.076.004A1 1 0 0 0 2 9v2a1 1 0 0 0 1 1h.004v6c0 .735.403 1.372.996 1.72V21a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h10v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.276A1.994 1.994 0 0 0 21.004 18v-6a1 1 0 0 0 1-1V9.062a1.006 1.006 0 0 0-.072-.455c-.203-.487-.635-.604-.928-.632zM19.006 18H5.004v-5h14.001l.001 5zM11.004 7v4h-6V7h6zm8 0v4h-6V7h6zm-12-3h10c.736 0 1.375.405 1.722 1H5.282c.347-.595.986-1 1.722-1z">
-            </path>
-            <circle cx="7.5" cy="15.5" r="1.5"></circle>
-            <circle cx="16.5" cy="15.5" r="1.5"></circle>
-          </svg>
-          Bus Arrival
-        </button>
-        <button class="tab-btn" data-tab="weather">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-            <path
-              d="M6.993 12c0 2.761 2.246 5.007 5.007 5.007s5.007-2.246 5.007-5.007S14.761 6.993 12 6.993 6.993 9.239 6.993 12zM12 8.993c1.658 0 3.007 1.349 3.007 3.007S13.658 15.007 12 15.007 8.993 13.658 8.993 12 10.342 8.993 12 8.993zM10.998 19h2v3h-2zm0-17h2v3h-2zm-9 9h3v2h-3zm17 0h3v2h-3zM4.219 18.363l2.12-2.122 1.415 1.414-2.12 2.122zM16.24 6.344l2.122-2.122 1.414 1.414-2.122 2.122zM6.342 7.759 4.22 5.637l1.415-1.414 2.12 2.122zm13.434 10.605-1.414 1.414-2.122-2.122 1.414-1.414z">
-            </path>
-          </svg>
-          Weather
-        </button>
-      </div>
-
-      <!-- Tab Contents -->
-      <div class="tab-container">
-        <!-- Settings Tab -->
-        <div class="tab-content active" data-tab="settings">
-          <div class="settings-section">
-            <h2 class="section-title">WiFi Configuration</h2>
-            <div class="setting-item">
-              <label class="setting-label">Current Network</label>
-              <div class="setting-value" id="current-wifi-status">Loading...</div>
-              <button class="btn btn-secondary" id="reconfigure-wifi-btn">Reconfigure WiFi</button>
-            </div>
-          </div>
-
-          <div class="settings-section">
-            <h2 class="section-title">LTA DataMall API</h2>
-            <form id="lta-api-form" class="form-container">
-              <div class="form-group">
-                <label for="lta-api-input" class="form-label">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path
-                      d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-                  </svg>
-                  API Key
-                </label>
-                <input id="lta-api-input" class="input" type="text" placeholder="Enter new API key" />
-                <div id="lta-api-status" class="status-message"></div>
-              </div>
-              <button type="submit" class="btn btn-primary">Update API Key</button>
-            </form>
-          </div>
-
-          <div class="settings-section">
-            <h2 class="section-title">Bus Stop Configuration</h2>
-            <form id="bus-stop-form" class="form-container">
-              <div class="form-group">
-                <label for="bus-stop-input" class="form-label">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M8 6v6M16 6v6M6.5 8h11M6.5 12h11" />
-                  </svg>
-                  Bus Stop Code
-                </label>
-                <input id="bus-stop-input" class="input" type="text" placeholder="Enter bus stop code (e.g., 83139)" />
-                <div id="bus-stop-status" class="status-message"></div>
-              </div>
-              <button type="submit" class="btn btn-primary">Save Bus Stop</button>
-            </form>
-          </div>
-
-          <div class="settings-section">
-            <h2 class="section-title">Weather Configuration</h2>
-
-            <form id="weather-region-form" class="form-container">
-              <div class="form-group">
-                <label for="weather-region-select" class="form-label">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  Region
-                </label>
-                <select id="weather-region-select" class="input">
-                  <option value="">Loading...</option>
-                </select>
-                <div id="weather-region-status" class="status-message"></div>
-              </div>
-              <button type="submit" class="btn btn-primary">Save Region</button>
-            </form>
-
-            <form id="weather-town-form" class="form-container">
-              <div class="form-group">
-                <label for="weather-town-input" class="form-label">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" />
-                  </svg>
-                  Town
-                </label>
-                <input id="weather-town-input" class="input" type="text" placeholder="Enter town name" />
-                <div id="weather-town-status" class="status-message"></div>
-              </div>
-              <button type="submit" class="btn btn-primary">Save Town</button>
-            </form>
-
-            <div class="form-container">
-              <button class="btn btn-secondary" id="load-weather-towns-btn">Load Available Towns</button>
-              <div id="weather-towns-list" class="towns-list"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bus Arrival Tab -->
-        <div class="tab-content" data-tab="bus">
-          <div class="test-section">
-            <div class="test-header">
-              <h2 class="section-title">Test Bus Arrivals</h2>
-              <p class="section-description">Fetch real-time bus arrival data for your configured stop</p>
-            </div>
-            <button class="btn btn-primary btn-lg" id="fetch-bus-btn">
-              Fetch Bus Arrivals
-              <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+      <!-- Setup Screen 1: Welcome -->
+      <div id="setup-screen-1" class="setup-screen hero-content hidden">
+        <div class="setup-card fade-in">
+          <div class="emoji-bounce">👋</div>
+          <h1 class="hero-title">Welcome!</h1>
+          <p class="hero-subtitle">
+            Let's get your device configured in just a few steps
+          </p>
+          <p class="setup-description">
+            Connect to WiFi and set up your API token for LTA's DataMall API.<br />We
+            will use this for real-time bus arrival information.
+          </p>
+          <div class="hero-action">
+            <button
+              class="btn btn-primary btn-lg"
+              id="setup-screen-1-continue-btn"
+            >
+              Get Started
+              <svg
+                class="btn-icon"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
               </svg>
             </button>
-            <div id="bus-results" class="results-container"></div>
           </div>
         </div>
+      </div>
 
-        <!-- Weather Tab -->
-        <div class="tab-content" data-tab="weather">
-          <div class="test-section">
-            <div class="test-header">
-              <h2 class="section-title">Test Weather Forecast</h2>
-              <p class="section-description">Fetch weather forecast for your configured location</p>
+      <!-- Setup Screen 2: WiFi Configuration -->
+      <div id="setup-screen-2" class="setup-screen hero-content hidden">
+        <div class="setup-card fade-in">
+          <div class="icon-wrapper">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+              <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+              <line x1="12" y1="20" x2="12.01" y2="20" />
+            </svg>
+          </div>
+          <h1 class="hero-title">Connect to WiFi</h1>
+          <p class="hero-subtitle">Select your network from the list below</p>
+
+          <div class="form-container">
+            <div class="wifi-list-container">
+              <div id="setup-screen-2-wifi-list" class="list wifi-list"></div>
+              <div class="scanning-indicator">
+                <div class="pulse-dot"></div>
+                <span>Scanning for networks...</span>
+              </div>
             </div>
-            <button class="btn btn-primary btn-lg" id="fetch-weather-btn">
-              Fetch Weather
-              <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+
+            <div class="form-group">
+              <label for="setup-screen-2-passphrase-inp" class="form-label">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Password
+              </label>
+              <input
+                id="setup-screen-2-passphrase-inp"
+                class="input"
+                type="password"
+                placeholder="Enter network password"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="hero-action">
+            <button
+              id="setup-screen-2-continue-btn"
+              class="btn btn-primary btn-lg"
+            >
+              Connect
+              <svg
+                class="btn-icon"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
               </svg>
             </button>
-            <div id="weather-results" class="results-container"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Setup Screen 3: API Configuration -->
+      <div id="setup-screen-3" class="setup-screen hero-content hidden">
+        <div class="setup-card fade-in">
+          <div class="icon-wrapper">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+              />
+            </svg>
+          </div>
+          <h1 class="hero-title">LTA DataMall Setup</h1>
+          <p class="hero-subtitle">Connect to Singapore's bus arrival data</p>
+
+          <div class="form-container">
+            <div class="info-box">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <div style="text-align: start">
+                <strong>Need an API key?</strong>
+                <p>
+                  Get your free API key from
+                  <a
+                    href="https://datamall.lta.gov.sg/content/datamall/en/request-for-api.html"
+                    target="_blank"
+                    class="link"
+                    >LTA DataMall</a
+                  >
+                </p>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="setup-screen-3-apikey-inp" class="form-label">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
+                  />
+                </svg>
+                API Key
+              </label>
+              <input
+                id="setup-screen-3-apikey-inp"
+                class="input"
+                type="text"
+                placeholder="Enter your LTA DataMall API key"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="hero-action">
+            <button
+              id="setup-screen-3-continue-btn"
+              class="btn btn-primary btn-lg"
+            >
+              Complete Setup
+              <svg
+                class="btn-icon"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script type="module" src="src/main.ts"></script>
-</body>
+    <!-- Config Complete State -->
+    <div id="state-setup-complete" class="hidden app-state">
+      <div class="completion-container">
+        <div class="completion-card fade-in">
+          <div class="success-checkmark">
+            <svg
+              width="80"
+              height="80"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <h1 class="completion-title">All Set! 🎉</h1>
+          <p class="completion-subtitle">
+            Your Bus Butler is ready to provide real-time bus arrival
+            information
+          </p>
+          <div class="completion-details">
+            <div class="detail-item">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>WiFi Connected</span>
+            </div>
+            <div class="detail-item">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>API Configured</span>
+            </div>
+          </div>
+          <div class="hero-action" style="margin-top: 2rem">
+            <button class="btn btn-primary btn-lg" id="open-dashboard-btn">
+              Open Dashboard
+              <svg
+                class="btn-icon"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- Dashboard State -->
+    <div id="state-dashboard" class="hidden app-state">
+      <div class="dashboard-container">
+        <div class="dashboard-header">
+          <h1 class="dashboard-title">Bus Butler Dashboard</h1>
+          <p class="dashboard-subtitle">Configure and test your device</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+          <button class="tab-btn active" data-tab="settings">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 16c2.206 0 4-1.794 4-4s-1.794-4-4-4-4 1.794-4 4 1.794 4 4 4zm0-6c1.084 0 2 .916 2 2s-.916 2-2 2-2-.916-2-2 .916-2 2-2z"
+              ></path>
+              <path
+                d="m2.845 16.136 1 1.73c.531.917 1.809 1.261 2.73.73l.529-.306A8.1 8.1 0 0 0 9 19.402V20c0 1.103.897 2 2 2h2c1.103 0 2-.897 2-2v-.598a8.132 8.132 0 0 0 1.896-1.111l.529.306c.923.53 2.198.188 2.731-.731l.999-1.729a2.001 2.001 0 0 0-.731-2.732l-.505-.292a7.718 7.718 0 0 0 0-2.224l.505-.292a2.002 2.002 0 0 0 .731-2.732l-.999-1.729c-.531-.92-1.808-1.265-2.731-.732l-.529.306A8.1 8.1 0 0 0 15 4.598V4c0-1.103-.897-2-2-2h-2c-1.103 0-2 .897-2 2v.598a8.132 8.132 0 0 0-1.896 1.111l-.529-.306c-.924-.531-2.2-.187-2.731.732l-.999 1.729a2.001 2.001 0 0 0 .731 2.732l.505.292a7.683 7.683 0 0 0 0 2.223l-.505.292a2.003 2.003 0 0 0-.731 2.733zm3.326-2.758A5.703 5.703 0 0 1 6 12c0-.462.058-.926.17-1.378a.999.999 0 0 0-.47-1.108l-1.123-.65.998-1.729 1.145.662a.997.997 0 0 0 1.188-.142 6.071 6.071 0 0 1 2.384-1.399A1 1 0 0 0 11 5.3V4h2v1.3a1 1 0 0 0 .708.956 6.083 6.083 0 0 1 2.384 1.399.999.999 0 0 0 1.188.142l1.144-.661 1 1.729-1.124.649a1 1 0 0 0-.47 1.108c.112.452.17.916.17 1.378 0 .461-.058.925-.171 1.378a1 1 0 0 0 .471 1.108l1.123.649-.998 1.729-1.145-.661a.996.996 0 0 0-1.188.142 6.071 6.071 0 0 1-2.384 1.399A1 1 0 0 0 13 18.7l.002 1.3H11v-1.3a1 1 0 0 0-.708-.956 6.083 6.083 0 0 1-2.384-1.399.992.992 0 0 0-1.188-.141l-1.144.662-1-1.729 1.124-.651a1 1 0 0 0 .471-1.108z"
+              ></path>
+            </svg>
+            Settings
+          </button>
+          <button class="tab-btn" data-tab="bus">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M21.004 7.975V6c0-2.206-1.794-4-4-4h-10c-2.206 0-4 1.794-4 4v1.998l-.076.004A1 1 0 0 0 2 9v2a1 1 0 0 0 1 1h.004v6c0 .735.403 1.372.996 1.72V21a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1h10v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1.276A1.994 1.994 0 0 0 21.004 18v-6a1 1 0 0 0 1-1V9.062a1.006 1.006 0 0 0-.072-.455c-.203-.487-.635-.604-.928-.632zM19.006 18H5.004v-5h14.001l.001 5zM11.004 7v4h-6V7h6zm8 0v4h-6V7h6zm-12-3h10c.736 0 1.375.405 1.722 1H5.282c.347-.595.986-1 1.722-1z"
+              ></path>
+              <circle cx="7.5" cy="15.5" r="1.5"></circle>
+              <circle cx="16.5" cy="15.5" r="1.5"></circle>
+            </svg>
+            Bus Arrival
+          </button>
+          <button class="tab-btn" data-tab="weather">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M6.993 12c0 2.761 2.246 5.007 5.007 5.007s5.007-2.246 5.007-5.007S14.761 6.993 12 6.993 6.993 9.239 6.993 12zM12 8.993c1.658 0 3.007 1.349 3.007 3.007S13.658 15.007 12 15.007 8.993 13.658 8.993 12 10.342 8.993 12 8.993zM10.998 19h2v3h-2zm0-17h2v3h-2zm-9 9h3v2h-3zm17 0h3v2h-3zM4.219 18.363l2.12-2.122 1.415 1.414-2.12 2.122zM16.24 6.344l2.122-2.122 1.414 1.414-2.122 2.122zM6.342 7.759 4.22 5.637l1.415-1.414 2.12 2.122zm13.434 10.605-1.414 1.414-2.122-2.122 1.414-1.414z"
+              ></path>
+            </svg>
+            Weather
+          </button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-container">
+          <!-- Settings Tab -->
+          <div class="tab-content active" data-tab="settings">
+            <div class="settings-section">
+              <h2 class="section-title">WiFi Configuration</h2>
+              <div class="setting-item">
+                <label class="setting-label">Current Network</label>
+                <div class="setting-value" id="current-wifi-status">
+                  Loading...
+                </div>
+                <button class="btn btn-secondary" id="reconfigure-wifi-btn">
+                  Reconfigure WiFi
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-section">
+              <h2 class="section-title">LTA DataMall API</h2>
+              <form id="lta-api-form" class="form-container">
+                <div class="form-group">
+                  <label for="lta-api-input" class="form-label">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
+                      />
+                    </svg>
+                    API Key
+                  </label>
+                  <input
+                    id="lta-api-input"
+                    class="input"
+                    type="text"
+                    placeholder="Enter new API key"
+                  />
+                  <div id="lta-api-status" class="status-message"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  Update API Key
+                </button>
+              </form>
+            </div>
+
+            <div class="settings-section">
+              <h2 class="section-title">Bus Stop Configuration</h2>
+              <form id="bus-stop-form" class="form-container">
+                <div class="form-group">
+                  <label for="bus-stop-input" class="form-label">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M8 6v6M16 6v6M6.5 8h11M6.5 12h11" />
+                    </svg>
+                    Bus Stop Code
+                  </label>
+                  <input
+                    id="bus-stop-input"
+                    class="input"
+                    type="text"
+                    placeholder="Enter bus stop code (e.g., 83139)"
+                  />
+                  <div id="bus-stop-status" class="status-message"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  Save Bus Stop
+                </button>
+              </form>
+            </div>
+
+            <div class="settings-section">
+              <h2 class="section-title">Weather Configuration</h2>
+
+              <form id="weather-region-form" class="form-container">
+                <div class="form-group">
+                  <label for="weather-region-select" class="form-label">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+                      />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    Region
+                  </label>
+                  <select id="weather-region-select" class="input">
+                    <option value="">Loading...</option>
+                  </select>
+                  <div id="weather-region-status" class="status-message"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  Save Region
+                </button>
+              </form>
+
+              <form id="weather-town-form" class="form-container">
+                <div class="form-group">
+                  <label for="weather-town-input" class="form-label">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                      />
+                      <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    Town
+                  </label>
+                  <input
+                    id="weather-town-input"
+                    class="input"
+                    type="text"
+                    placeholder="Enter town name"
+                  />
+                  <div id="weather-town-status" class="status-message"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Town</button>
+              </form>
+
+              <div class="form-container">
+                <button class="btn btn-secondary" id="load-weather-towns-btn">
+                  Load Available Towns
+                </button>
+                <div id="weather-towns-list" class="towns-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bus Arrival Tab -->
+          <div class="tab-content" data-tab="bus">
+            <div class="test-section">
+              <div class="test-header">
+                <h2 class="section-title">Test Bus Arrivals</h2>
+                <p class="section-description">
+                  Fetch real-time bus arrival data for your configured stop
+                </p>
+              </div>
+              <button class="btn btn-primary btn-lg" id="fetch-bus-btn">
+                Fetch Bus Arrivals
+                <svg
+                  class="btn-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              </button>
+              <div id="bus-results" class="results-container"></div>
+            </div>
+          </div>
+
+          <!-- Weather Tab -->
+          <div class="tab-content" data-tab="weather">
+            <div class="test-section">
+              <div class="test-header">
+                <h2 class="section-title">Test Weather Forecast</h2>
+                <p class="section-description">
+                  Fetch weather forecast for your configured location
+                </p>
+              </div>
+              <button class="btn btn-primary btn-lg" id="fetch-weather-btn">
+                Fetch Weather
+                <svg
+                  class="btn-icon"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              </button>
+              <div id="weather-results" class="results-container"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="src/main.ts"></script>
+  </body>
 </html>

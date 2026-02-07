@@ -52,6 +52,11 @@ export class SetupState {
     this.displayWorkflowStep(1)
   }
 
+  skipWifiSetup() {
+    this.setupStep = 3
+    this.displayWorkflowStep(3)
+  }
+
   bindStep1Actions() {
     this.step1ContinueButton.addEventListener('click', () => {
       if (this.setupStep !== 1) {
@@ -77,7 +82,7 @@ export class SetupState {
   }
 
   bindStep2Actions() {
-    this.step2ContinueButton.addEventListener('click', () => {
+    this.step2ContinueButton.addEventListener('click', async () => {
       if (this.setupStep !== 2) {
         return
       }
@@ -89,12 +94,18 @@ export class SetupState {
         clearInterval(this.scanWifiIntervalJob)
         this.scanWifiIntervalJob = null
       }
+      this.step2ContinueButton.disabled = true
+      await Api.saveWifiNetwork(
+        this.selectedWifiSsid,
+        this.step2PassphraseInput.value,
+      )
+      this.step2ContinueButton.disabled = false
       this.displayWorkflowStep(3)
     })
   }
 
   bindStep3Actions() {
-    this.step3ContinueButton.addEventListener('click', () => {
+    this.step3ContinueButton.addEventListener('click', async () => {
       if (this.setupStep !== 3) {
         return
       }
@@ -103,6 +114,9 @@ export class SetupState {
         alert('Please enter your API key')
         return
       }
+      this.step3ContinueButton.disabled = true
+      await Api.saveLtaApiKey(apiKey)
+      this.step3ContinueButton.disabled = false
       this.onWorkflowCompleteAction?.()
     })
   }

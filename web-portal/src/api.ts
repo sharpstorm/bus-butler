@@ -12,6 +12,10 @@ export type GetWifiNetworkRespBody = {
   ssid: string | null
 }
 
+export type GetSavedLtaApiKeyBody = {
+  isApiKeySaved: boolean
+}
+
 export type BusStopCodeRespBody = {
   busStopCode: string | null
 }
@@ -92,6 +96,11 @@ export class Api {
   }
 
   // LTA DataMall APIs
+  static async getSavedLtaApiKey() {
+    const resp = await fetch('/api/config/lta-api').then((x) => x.json())
+    return resp as GetSavedLtaApiKeyBody
+  }
+
   static async saveLtaApiKey(apiKey: string) {
     const resp = await fetch('/api/config/lta-api', {
       method: 'POST',
@@ -145,12 +154,16 @@ export class Api {
   }
 
   static async getWeatherTownList() {
-    const resp = await fetch('/api/config/weather-town-list').then((x) => x.json())
+    const resp = await fetch('/api/config/weather-town-list').then((x) =>
+      x.json(),
+    )
     return resp as WeatherTownListRespBody
   }
 
   static async getWeatherRegionList() {
-    const resp = await fetch('/api/config/weather-region-list').then((x) => x.json())
+    const resp = await fetch('/api/config/weather-region-list').then((x) =>
+      x.json(),
+    )
     return resp as WeatherRegionListRespBody
   }
 
@@ -165,7 +178,9 @@ export class Api {
   }
 
   static async testWeather() {
-    const resp = await fetch('/api/test/weather', { method: 'POST' }).then((x) => x.json())
+    const resp = await fetch('/api/test/weather', { method: 'POST' }).then(
+      (x) => x.json(),
+    )
     return resp as WeatherRespBody
   }
 }

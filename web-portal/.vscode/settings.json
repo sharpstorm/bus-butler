@@ -1,0 +1,5 @@
+{
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode" // Override for HTML files
+  }
+}

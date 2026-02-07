@@ -3,7 +3,6 @@ import { Api, BusArrivalRespBody, WeatherRespBody, BusService } from './api'
 export class DashboardState {
   constructor() {
     this.initTabs()
-    this.initSettings()
     this.initBusArrival()
     this.initWeather()
   }
@@ -27,12 +26,15 @@ export class DashboardState {
 
     // Update tab content
     document.querySelectorAll('.tab-content').forEach((content) => {
-      content.classList.toggle('active', content.getAttribute('data-tab') === tabName)
+      content.classList.toggle(
+        'active',
+        content.getAttribute('data-tab') === tabName,
+      )
     })
   }
 
   // Settings Tab
-  private async initSettings() {
+  async initSettings() {
     // Load weather regions
     await this.loadWeatherRegions()
 
@@ -44,28 +46,36 @@ export class DashboardState {
     wifiBtn?.addEventListener('click', () => this.reconfigureWifi())
 
     // Bus stop configuration
-    const busStopForm = document.getElementById('bus-stop-form') as HTMLFormElement
+    const busStopForm = document.getElementById(
+      'bus-stop-form',
+    ) as HTMLFormElement
     busStopForm?.addEventListener('submit', (e) => {
       e.preventDefault()
       this.saveBusStop()
     })
 
     // Weather town configuration
-    const weatherTownForm = document.getElementById('weather-town-form') as HTMLFormElement
+    const weatherTownForm = document.getElementById(
+      'weather-town-form',
+    ) as HTMLFormElement
     weatherTownForm?.addEventListener('submit', (e) => {
       e.preventDefault()
       this.saveWeatherTown()
     })
 
     // Weather region configuration
-    const weatherRegionForm = document.getElementById('weather-region-form') as HTMLFormElement
+    const weatherRegionForm = document.getElementById(
+      'weather-region-form',
+    ) as HTMLFormElement
     weatherRegionForm?.addEventListener('submit', (e) => {
       e.preventDefault()
       this.saveWeatherRegion()
     })
 
     // LTA API key configuration
-    const apiKeyForm = document.getElementById('lta-api-form') as HTMLFormElement
+    const apiKeyForm = document.getElementById(
+      'lta-api-form',
+    ) as HTMLFormElement
     apiKeyForm?.addEventListener('submit', (e) => {
       e.preventDefault()
       this.saveLtaApiKey()
@@ -74,7 +84,6 @@ export class DashboardState {
     // Load weather towns
     const loadTownsBtn = document.getElementById('load-weather-towns-btn')
     loadTownsBtn?.addEventListener('click', () => this.loadWeatherTowns())
-
   }
 
   private async loadCurrentSettings() {
@@ -88,21 +97,27 @@ export class DashboardState {
 
       // Load bus stop
       const busStopResp = await Api.getBusStopCode()
-      const busStopInput = document.getElementById('bus-stop-input') as HTMLInputElement
+      const busStopInput = document.getElementById(
+        'bus-stop-input',
+      ) as HTMLInputElement
       if (busStopInput && busStopResp.busStopCode) {
         busStopInput.value = busStopResp.busStopCode
       }
 
       // Load weather town
       const townResp = await Api.getWeatherTown()
-      const townInput = document.getElementById('weather-town-input') as HTMLInputElement
+      const townInput = document.getElementById(
+        'weather-town-input',
+      ) as HTMLInputElement
       if (townInput && townResp.town) {
         townInput.value = townResp.town
       }
 
       // Load weather region
       const regionResp = await Api.getWeatherRegion()
-      const regionSelect = document.getElementById('weather-region-select') as HTMLSelectElement
+      const regionSelect = document.getElementById(
+        'weather-region-select',
+      ) as HTMLSelectElement
       if (regionSelect && regionResp.region) {
         regionSelect.value = regionResp.region
       }
@@ -114,7 +129,9 @@ export class DashboardState {
   private async loadWeatherRegions() {
     try {
       const resp = await Api.getWeatherRegionList()
-      const select = document.getElementById('weather-region-select') as HTMLSelectElement
+      const select = document.getElementById(
+        'weather-region-select',
+      ) as HTMLSelectElement
       if (select) {
         // Clear existing options
         while (select.firstChild) {
@@ -141,7 +158,9 @@ export class DashboardState {
   }
 
   private async loadWeatherTowns() {
-    const btn = document.getElementById('load-weather-towns-btn') as HTMLButtonElement
+    const btn = document.getElementById(
+      'load-weather-towns-btn',
+    ) as HTMLButtonElement
     const townsList = document.getElementById('weather-towns-list')
 
     if (!btn || !townsList) return
@@ -202,7 +221,9 @@ export class DashboardState {
   }
 
   private reconfigureWifi() {
-    if (confirm('This will restart the device into WiFi setup mode. Continue?')) {
+    if (
+      confirm('This will restart the device into WiFi setup mode. Continue?')
+    ) {
       window.location.reload()
     }
   }
@@ -228,7 +249,9 @@ export class DashboardState {
   }
 
   private async saveWeatherTown() {
-    const input = document.getElementById('weather-town-input') as HTMLInputElement
+    const input = document.getElementById(
+      'weather-town-input',
+    ) as HTMLInputElement
     const status = document.getElementById('weather-town-status')
 
     if (!input || !status) return
@@ -248,7 +271,9 @@ export class DashboardState {
   }
 
   private async saveWeatherRegion() {
-    const select = document.getElementById('weather-region-select') as HTMLSelectElement
+    const select = document.getElementById(
+      'weather-region-select',
+    ) as HTMLSelectElement
     const status = document.getElementById('weather-region-status')
 
     if (!select || !status) return
@@ -392,10 +417,14 @@ export class DashboardState {
       arrivals.appendChild(this.createBusArrivalItem('Next', service.nextBus1))
     }
     if (service.nextBus2) {
-      arrivals.appendChild(this.createBusArrivalItem('Following', service.nextBus2))
+      arrivals.appendChild(
+        this.createBusArrivalItem('Following', service.nextBus2),
+      )
     }
     if (service.nextBus3) {
-      arrivals.appendChild(this.createBusArrivalItem('Subsequent', service.nextBus3))
+      arrivals.appendChild(
+        this.createBusArrivalItem('Subsequent', service.nextBus3),
+      )
     }
 
     card.appendChild(arrivals)
@@ -431,7 +460,9 @@ export class DashboardState {
     details.appendChild(busType)
 
     const busLoad = document.createElement('span')
-    busLoad.className = `bus-load load-${arrival.busLoad.toLowerCase().replace(/\s+/g, '-')}`
+    busLoad.className = `bus-load load-${arrival.busLoad
+      .toLowerCase()
+      .replace(/\s+/g, '-')}`
     busLoad.textContent = arrival.busLoad
     details.appendChild(busLoad)
 
@@ -453,7 +484,9 @@ export class DashboardState {
   }
 
   private async fetchWeather() {
-    const btn = document.getElementById('fetch-weather-btn') as HTMLButtonElement
+    const btn = document.getElementById(
+      'fetch-weather-btn',
+    ) as HTMLButtonElement
     const results = document.getElementById('weather-results')
 
     if (!btn || !results) return
@@ -525,7 +558,9 @@ export class DashboardState {
 
     const forecastIcon = document.createElement('div')
     forecastIcon.className = 'forecast-icon'
-    forecastIcon.textContent = this.getWeatherIcon(data.twoHourForecast.forecast)
+    forecastIcon.textContent = this.getWeatherIcon(
+      data.twoHourForecast.forecast,
+    )
     forecastItem.appendChild(forecastIcon)
 
     const forecastText = document.createElement('div')
@@ -589,7 +624,10 @@ export class DashboardState {
     svg.setAttribute('stroke', 'currentColor')
     svg.setAttribute('stroke-width', '2')
 
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    const circle = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'circle',
+    )
     circle.setAttribute('cx', '12')
     circle.setAttribute('cy', '12')
     circle.setAttribute('r', '10')
@@ -628,7 +666,11 @@ export class DashboardState {
     return '🌤️'
   }
 
-  private showStatus(element: HTMLElement, message: string, type: 'success' | 'error') {
+  private showStatus(
+    element: HTMLElement,
+    message: string,
+    type: 'success' | 'error',
+  ) {
     element.textContent = message
     element.className = `status-message status-${type}`
     setTimeout(() => {

@@ -1,11 +1,8 @@
 import { Api } from './api'
-import { SetupState } from './setup-state'
-import { DashboardState } from './dashboard-state'
+import { initSetupCompleteState } from './setup-complete-state'
 import { setAppState } from './state'
+import { dashboardState, setupState } from './state-store'
 import { findAndAssertDomId } from './utils'
-
-let setupState: SetupState | undefined
-let dashboardState: DashboardState | undefined
 
 // Theme management
 function initTheme() {
@@ -31,28 +28,23 @@ function initTheme() {
   })
 }
 
-function initDashboardButton() {
-  const dashboardBtn = findAndAssertDomId('open-dashboard-btn')
-  dashboardBtn.addEventListener('click', () => {
-    setAppState('dashboard')
-    if (!dashboardState) {
-      dashboardState = new DashboardState()
-    }
-  })
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme()
-  initDashboardButton()
+  initSetupCompleteState()
 
-  const configuredSsid = await Api.getConfiguredWifiSsid()
-  if (configuredSsid) {
-    setAppState('config')
-  } else {
-    setupState = new SetupState()
-    setupState.onWorkflowComplete(() => {
-      setAppState('config')
-    })
-    setAppState('setup')
+  const { ssid } = await Api.getConfiguredWifiSsid()
+  const { isApiKeySaved } = await Api.getSavedLtaApiKey()
+  if (ssid && isApiKeySaved) {
+    setAppState('dashboard')
+    dashboardState.initSettings()
+    return
   }
+
+  if (ssid) {
+    setupState.skipWifiSetup()
+  }
+  setupState.onWorkflowComplete(() => {
+    setAppState('setup-complete')
+  })
+  setAppState('setup')
 })
