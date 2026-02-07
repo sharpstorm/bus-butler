@@ -24,6 +24,8 @@ class SettingsState : public IAppState {
 
   void triggerTimeSync();
   void updateBrightnessSlider(int x);
+  uint8_t toTrueBrightness(uint8_t brightnessPercent);
+  uint8_t fromTrueBrightness(uint8_t brightness);
 
  public:
   void enter();

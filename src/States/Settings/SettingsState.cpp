@@ -11,13 +11,13 @@ void SettingsState::enter() {
   gfx->fillScreen(BG_DARK);
 
   // Load current brightness from config and screen
-  currentBrightness = configManager.getBrightness();
+  currentBrightness = fromTrueBrightness(configManager.getBrightness());
   if (currentBrightness == 0) {
-    currentBrightness = 100;
+    currentBrightness = 127;
   }
 
   savedBrightness = currentBrightness;
-  screen.setBrightness(currentBrightness);
+  screen.setBrightness(toTrueBrightness(currentBrightness));
 
   isDraggingSlider = false;
   syncInProgress = false;
@@ -33,7 +33,7 @@ void SettingsState::enter() {
 void SettingsState::exit() {
   // Save brightness to config if changed
   if (currentBrightness != savedBrightness) {
-    configManager.saveBrightness(currentBrightness);
+    configManager.saveBrightness(toTrueBrightness(currentBrightness));
   }
 }
 
@@ -112,14 +112,21 @@ void SettingsState::updateBrightnessSlider(int x) {
   int sliderX = x - SettingsRenderer::CONTENT_PADDING_X;
   sliderX = max(0, min(SettingsRenderer::CONTENT_WIDTH, sliderX));
 
-  uint8_t newBrightness = (sliderX * 100) / SettingsRenderer::CONTENT_WIDTH;
-  newBrightness =
-      max((uint8_t)10, min((uint8_t)100, newBrightness));  // Clamp to 10-100%
+  uint8_t newBrightnessPercent = static_cast<int>(
+      round(((float)sliderX / SettingsRenderer::CONTENT_WIDTH) * 100));
 
-  if (newBrightness != currentBrightness) {
-    currentBrightness = newBrightness;
-    screen.setBrightness(currentBrightness);
+  if (newBrightnessPercent != currentBrightness) {
+    currentBrightness = newBrightnessPercent;
+    screen.setBrightness(toTrueBrightness(currentBrightness));
     SettingsRenderer::renderBrightnessControl(currentBrightness);
     gfx->flush();
   }
+}
+
+uint8_t SettingsState::toTrueBrightness(uint8_t brightnessPercent) {
+  return static_cast<int>(round(brightnessPercent * 255 / 100));
+}
+
+uint8_t SettingsState::fromTrueBrightness(uint8_t brightness) {
+  return static_cast<int>(round(brightness * 100 / 255));
 }
