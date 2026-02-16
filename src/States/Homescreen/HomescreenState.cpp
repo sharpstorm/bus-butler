@@ -43,6 +43,13 @@ void HomescreenState::enter() {
   lastWeatherDisplayToggleTimestamp = -1;
   currentWeatherMode = WeatherDisplayMode::TwoHour;
 
+  // Reset pagination
+  currentPage = 0;
+  totalPages = 1;
+  touchStartX = -1;
+  touchStartY = -1;
+  isSwipeInProgress = false;
+
   if (ltaDatamallClient.isConfigured()) {
     return;
   }
@@ -212,10 +219,28 @@ void HomescreenState::paintBusArrivalCache() {
   }
 
   busArrivalRenderer.renderBusStopCode(cachedBusArrival->busStopCode);
-  int numServices = min(6, (int)cachedBusArrival->services.size());
-  for (int i = 0; i < numServices; i++) {
-    busArrivalRenderer.renderBusService(i, &cachedBusArrival->services[i]);
+
+  // Get sorted services
+  vector<BusArrivalServiceDetail*> sortedServices = getSortedBusServices();
+
+  // Calculate pagination
+  int totalServices = sortedServices.size();
+  totalPages =
+      (totalServices + 5) / 6;  // Ceiling division (6 services per page)
+  if (totalPages == 0) totalPages = 1;
+  if (currentPage >= totalPages) currentPage = 0;
+
+  // Display services for current page
+  int startIdx = currentPage * 6;
+  int endIdx = min(startIdx + 6, totalServices);
+
+  for (int i = startIdx; i < endIdx; i++) {
+    busArrivalRenderer.renderBusService(i - startIdx, sortedServices[i]);
   }
+
+  // Always render page indicator (shows "Pg 1/x" for multi-page, bars for
+  // single page)
+  busArrivalRenderer.renderPageIndicator(currentPage + 1, totalPages);
 
   busArrivalRenderer.finalize();
   lastBusArrivalPaintTimestamp = TimeUtil::getUnixTime();
@@ -274,4 +299,101 @@ void HomescreenState::paintWeatherIndicator() {
     String label = weatherConditionToShortString(condition);
     weatherRenderer.renderWeatherIndicator(condition, label, false, tempRange);
   }
+}
+
+vector<BusArrivalServiceDetail*> HomescreenState::getSortedBusServices() {
+  vector<BusArrivalServiceDetail*> result;
+
+  if (cachedBusArrival == nullptr || cachedBusArrival->services.empty()) {
+    return result;
+  }
+  result.reserve(cachedBusArrival->services.size());
+
+  // Get service order configuration (comma-separated string)
+  BusServiceOrderConfig configOrdering = configManager.getBusServiceOrder();
+
+  if (configOrdering.size == 0 || configOrdering.services == nullptr) {
+    // No custom order - return services in API order
+    for (auto& service : cachedBusArrival->services) {
+      result.push_back(&service);
+    }
+    return result;
+  }
+
+  // We incur O(n^2) to pick from cached response because we don't want to
+  // deal with malloc and hashmap lookups, which can be costly in memory
+  // fragmentation
+  for (int i = 0; i < configOrdering.size; i++) {
+    String serviceNo = configOrdering.services[i];
+    for (int j = 0; j < cachedBusArrival->services.size(); j++) {
+      BusArrivalServiceDetail* servicePtr = &cachedBusArrival->services[j];
+      if (servicePtr->serviceNo == serviceNo) {
+        result.push_back(servicePtr);
+        break;
+      }
+    }
+  }
+
+  // Incur another O(n^2) to add any remaining services (not in config) at the
+  // end
+  for (int i = 0; i < cachedBusArrival->services.size(); i++) {
+    String serviceNo = cachedBusArrival->services[i].serviceNo;
+    bool isFound = false;
+    for (int j = 0; j < configOrdering.size; j++) {
+      if (serviceNo == configOrdering.services[j]) {
+        isFound = true;
+        break;
+      }
+    }
+
+    if (!isFound) {
+      result.push_back(&cachedBusArrival->services[i]);
+    }
+  }
+
+  return result;
+}
+
+void HomescreenState::handleTouchStart(int x, int y) {
+  touchStartX = x;
+  touchStartY = y;
+  isSwipeInProgress = true;
+}
+
+void HomescreenState::handleTouchEnd(int x, int y) {
+  if (!isSwipeInProgress) {
+    return;
+  }
+
+  isSwipeInProgress = false;
+
+  // Check if this was a swipe
+  int deltaX = x - touchStartX;
+  int deltaY = abs(y - touchStartY);
+
+  // Must move horizontally more than threshold and not too much vertically
+  if (abs(deltaX) >= SWIPE_THRESHOLD && deltaY < SWIPE_MAX_Y_DEVIATION) {
+    // Visual feedback - flash the screen briefly
+    gfx->fillRect(0, CONTENT_TOP, SCREEN_WIDTH, CONTENT_HEIGHT,
+                  0x2965);  // Dim overlay
+    gfx->flush();
+    delay(50);
+
+    if (deltaX > 0) {
+      // Swipe right - previous page
+      if (currentPage > 0) {
+        currentPage--;
+        paintBusArrivalCache();
+      }
+    } else {
+      // Swipe left - next page
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        paintBusArrivalCache();
+      }
+    }
+  }
+
+  touchStartX = -1;
+  touchStartY = -1;
 }

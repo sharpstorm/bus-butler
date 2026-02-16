@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 
 #include <memory>
+#include <vector>
 
 #include "../../LtaDatamallClient/BusArrivalApiTypes.h"
 #include "../../LtaDatamallClient/LtaDatamallClient.h"
@@ -31,6 +32,17 @@ class HomescreenState : public IAppState {
   BusArrivalRenderer busArrivalRenderer;
   LtaDatamallClient ltaDatamallClient;
 
+  // Pagination state
+  uint8_t currentPage = 0;
+  uint8_t totalPages = 1;
+
+  // Swipe detection state
+  int touchStartX = -1;
+  int touchStartY = -1;
+  bool isSwipeInProgress = false;
+  static constexpr int SWIPE_THRESHOLD = 80;        // Minimum pixels for swipe
+  static constexpr int SWIPE_MAX_Y_DEVIATION = 50;  // Max vertical movement
+
   // Weather state
   int32_t lastWeatherApiTimestamp = -1;
   int32_t lastWeatherDisplayToggleTimestamp = -1;
@@ -51,6 +63,11 @@ class HomescreenState : public IAppState {
   void updateWeatherCache();
   void paintBusArrivalCache();
   void paintWeatherIndicator();
+
+  // Helper functions
+  vector<BusArrivalServiceDetail*> getSortedBusServices();
+  void handleTouchStart(int x, int y);
+  void handleTouchEnd(int x, int y);
 
   static constexpr TickType_t API_QUERY_TIMEOUT_TICKS = pdMS_TO_TICKS(15000);
 

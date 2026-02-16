@@ -30,8 +30,10 @@ void loop() {
   updateTouch();
   if (!isPressed && hasTouch) {
     isPressed = true;
+    activeState->handleTouchStart(touchPoint.x, touchPoint.y);
   } else if (isPressed && !hasTouch) {
     activeState->handleTouch(touchPoint.x, touchPoint.y);
+    activeState->handleTouchEnd(touchPoint.x, touchPoint.y);
     isPressed = false;
   }
 

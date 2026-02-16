@@ -49,6 +49,7 @@ class BusArrivalRenderer {
   void renderBusService(uint8_t position, BusArrivalServiceDetail* data);
   void renderError(const char* message);
   void renderBusStopCode(String busStopCode);
+  void renderPageIndicator(uint8_t currentPage, uint8_t totalPages);
   void clearContent();
   void finalize();
 };

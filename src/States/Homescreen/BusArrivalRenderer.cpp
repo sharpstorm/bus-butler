@@ -165,6 +165,33 @@ void BusArrivalRenderer::renderBusStopCode(String busStopCode) {
                                  HEADER_L_BOX_Y + (HEADER_L_BOX_HEIGHT / 2));
 }
 
+void BusArrivalRenderer::renderPageIndicator(uint8_t currentPage,
+                                             uint8_t totalPages) {
+  // Clear the header right box area first
+  gfx->fillRect(HEADER_R_BOX_X + 1, HEADER_R_BOX_Y + 1, 
+                HEADER_R_BOX_WIDTH - 2, HEADER_R_BOX_HEIGHT - 2, BG_CARD);
+  
+  if (totalPages > 1) {
+    // Draw page indicator: "Pg 1/x"
+    String pageText = "Pg " + String(currentPage) + "/" + String(totalPages);
+    
+    gfx->setFont(NULL);
+    gfx->setTextSize(1);
+    gfx->setTextColor(NEON_CYAN);
+    
+    ScreenRenderer::drawCenterText(pageText,
+                                   HEADER_R_BOX_X + (HEADER_R_BOX_WIDTH / 2),
+                                   HEADER_R_BOX_Y + (HEADER_R_BOX_HEIGHT / 2));
+  } else {
+    // Single page - draw decorative bars (same as renderHeader)
+    const int barHeight = HEADER_R_BOX_HEIGHT - (HEADER_R_BOX_PADDING * 2);
+    const int barY = HEADER_R_BOX_Y + HEADER_R_BOX_PADDING;
+    gfx->fillRect(HEADER_R_BOX_X + 12, barY, 4, barHeight, NEON_MAGENTA);
+    gfx->fillRect(HEADER_R_BOX_X + 22, barY, 4, barHeight, DIM_MAGENTA);
+    gfx->fillRect(HEADER_R_BOX_X + 32, barY, 4, barHeight, GRAY_MID);
+  }
+}
+
 void BusArrivalRenderer::finalize() { gfx->flush(); }
 
 String BusArrivalRenderer::formatMins(long arrivalTimestamp, long timeNow) {
