@@ -444,24 +444,29 @@ void HomescreenState::handleTouchEnd(int x, int y) {
 
   // Must move horizontally more than threshold and not too much vertically
   if (abs(deltaX) >= SWIPE_THRESHOLD && deltaY < SWIPE_MAX_Y_DEVIATION) {
-    // Visual feedback - flash the screen briefly
-    gfx->fillRect(0, CONTENT_TOP, SCREEN_WIDTH, CONTENT_HEIGHT,
-                  0x2965);  // Dim overlay
-    gfx->flush();
-    delay(50);
+    bool pageChanged = false;
 
     if (deltaX > 0) {
       // Swipe right - previous page
       if (currentPage > 0) {
         currentPage--;
-        paintBusArrivalCache();
+        pageChanged = true;
       }
     } else {
       // Swipe left - next page
       if (currentPage < totalPages - 1) {
         currentPage++;
-        paintBusArrivalCache();
+        pageChanged = true;
       }
+    }
+
+    // Show visual feedback only if page changed
+    if (pageChanged) {
+      gfx->fillRect(0, CONTENT_TOP, SCREEN_WIDTH, CONTENT_HEIGHT,
+                    0x2965);  // Dim overlay
+      gfx->flush();
+      delay(50);
+      paintBusArrivalCache();
     }
   }
 
