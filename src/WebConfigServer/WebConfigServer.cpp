@@ -1,5 +1,6 @@
 #include "WebConfigServer.h"
 
+#include "Handlers/BusServiceConfigApi.h"
 #include "Handlers/ConfigTestApi.h"
 #include "Handlers/HardwareConfigApi.h"
 #include "Handlers/LtaDatamallConfigApi.h"
@@ -23,6 +24,12 @@ WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
             LtaDatamallConfigApi::getSavedBusStopCode);
   server.on("/api/config/busstop-code", HTTP_POST,
             LtaDatamallConfigApi::saveBusStopCode);
+  server.on("/api/config/bus-service-order", HTTP_GET,
+            BusServiceConfigApi::getBusServiceOrder);
+  server.on(
+      "/api/config/bus-service-order", HTTP_POST,
+      [](AsyncWebServerRequest* request) {}, NULL,
+      BusServiceConfigApi::saveBusServiceOrder);
 
   server.on("/api/config/screen-brightness", HTTP_POST,
             HardwareConfigApi::setScreenBrightness);

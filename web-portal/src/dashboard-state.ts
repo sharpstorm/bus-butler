@@ -5,6 +5,7 @@ export class DashboardState {
     this.initTabs()
     this.initBusArrival()
     this.initWeather()
+    this.initBusServiceOrdering()
   }
 
   private initTabs() {
@@ -310,6 +311,277 @@ export class DashboardState {
       input.value = ''
     } catch (error) {
       this.showStatus(status, 'Error saving API key', 'error')
+    }
+  }
+
+  // Bus Service Ordering
+  private serviceOrder: string[] = []
+  private draggedElement: HTMLElement | null = null
+
+  private initBusServiceOrdering() {
+    // Fetch current services button
+    const fetchBtn = document.getElementById('fetch-current-services-btn')
+    fetchBtn?.addEventListener('click', () => this.fetchCurrentServices())
+
+    // Add service manually
+    const addBtn = document.getElementById('add-service-btn')
+    const input = document.getElementById(
+      'manual-service-input',
+    ) as HTMLInputElement
+    addBtn?.addEventListener('click', () => this.addServiceManually())
+    input?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        this.addServiceManually()
+      }
+    })
+
+    // Save service order button
+    const saveBtn = document.getElementById('save-service-order-btn')
+    saveBtn?.addEventListener('click', () => this.saveServiceOrder())
+
+    // Load existing service order
+    this.loadServiceOrder()
+  }
+
+  private async loadServiceOrder() {
+    try {
+      const resp = await Api.getBusServiceOrder()
+      if (resp.order && resp.order.length > 0) {
+        this.serviceOrder = resp.order
+      } else {
+        this.serviceOrder = []
+      }
+      this.renderServiceList()
+    } catch (error) {
+      console.error('Error loading service order:', error)
+      this.serviceOrder = []
+      this.renderServiceList()
+    }
+  }
+
+  private async fetchCurrentServices() {
+    const btn = document.getElementById(
+      'fetch-current-services-btn',
+    ) as HTMLButtonElement
+    const status = document.getElementById('service-fetch-status')
+
+    if (!btn || !status) return
+
+    btn.disabled = true
+    btn.textContent = 'Fetching...'
+
+    try {
+      const busStopResp = await Api.getBusStopCode()
+      if (!busStopResp.busStopCode) {
+        throw new Error('Please configure a bus stop first')
+      }
+
+      const data = await Api.testBusArrival(busStopResp.busStopCode)
+
+      // Extract unique service numbers
+      const services = data.services.map((s) => s.service)
+
+      // Merge with existing order, keeping user's order but adding new services
+      const existingSet = new Set(this.serviceOrder)
+      const newServices = services.filter((s) => !existingSet.has(s))
+      this.serviceOrder = [...this.serviceOrder, ...newServices]
+
+      this.renderServiceList()
+      this.showStatus(
+        status,
+        `Loaded ${services.length} services from bus stop`,
+        'success',
+      )
+    } catch (error: any) {
+      this.showStatus(status, error.message || 'Error fetching services', 'error')
+    } finally {
+      btn.disabled = false
+      btn.textContent = 'Fetch Current Services'
+    }
+  }
+
+  private addServiceManually() {
+    const input = document.getElementById(
+      'manual-service-input',
+    ) as HTMLInputElement
+    const status = document.getElementById('service-fetch-status')
+
+    if (!input || !status) return
+
+    const serviceNo = input.value.trim().toUpperCase()
+    if (!serviceNo) {
+      this.showStatus(status, 'Please enter a service number', 'error')
+      return
+    }
+
+    if (this.serviceOrder.includes(serviceNo)) {
+      this.showStatus(status, 'Service already in list', 'error')
+      return
+    }
+
+    this.serviceOrder.push(serviceNo)
+    this.renderServiceList()
+    input.value = ''
+    this.showStatus(status, `Added service ${serviceNo}`, 'success')
+  }
+
+  private removeService(serviceNo: string) {
+    this.serviceOrder = this.serviceOrder.filter((s) => s !== serviceNo)
+    this.renderServiceList()
+  }
+
+  private renderServiceList() {
+    const container = document.getElementById('service-list')
+    if (!container) return
+
+    // Clear existing content
+    while (container.firstChild) {
+      container.removeChild(container.firstChild)
+    }
+
+    if (this.serviceOrder.length === 0) {
+      container.className = 'service-list empty'
+      const emptyMsg = document.createElement('div')
+      emptyMsg.textContent =
+        'No services configured. Fetch current services or add manually.'
+      container.appendChild(emptyMsg)
+      return
+    }
+
+    container.className = 'service-list'
+
+    this.serviceOrder.forEach((serviceNo, index) => {
+      const item = this.createServiceItem(serviceNo, index)
+      container.appendChild(item)
+    })
+  }
+
+  private createServiceItem(serviceNo: string, index: number): HTMLElement {
+    const item = document.createElement('div')
+    item.className = 'service-item'
+    item.draggable = true
+    item.dataset.service = serviceNo
+    item.dataset.index = index.toString()
+
+    // Drag handle
+    const handle = document.createElement('div')
+    handle.className = 'service-handle'
+    handle.innerHTML = '<span></span><span></span><span></span>'
+    item.appendChild(handle)
+
+    // Service number
+    const number = document.createElement('div')
+    number.className = 'service-number'
+    number.textContent = serviceNo
+    item.appendChild(number)
+
+    // Remove button
+    const removeBtn = document.createElement('button')
+    removeBtn.className = 'service-remove'
+    removeBtn.textContent = 'Remove'
+    removeBtn.onclick = (e) => {
+      e.stopPropagation()
+      this.removeService(serviceNo)
+    }
+    item.appendChild(removeBtn)
+
+    // Drag event handlers
+    item.addEventListener('dragstart', (e) => this.handleDragStart(e))
+    item.addEventListener('dragend', (e) => this.handleDragEnd(e))
+    item.addEventListener('dragover', (e) => this.handleDragOver(e))
+    item.addEventListener('drop', (e) => this.handleDrop(e))
+    item.addEventListener('dragenter', (e) => this.handleDragEnter(e))
+    item.addEventListener('dragleave', (e) => this.handleDragLeave(e))
+
+    return item
+  }
+
+  private handleDragStart(e: DragEvent) {
+    const target = e.currentTarget as HTMLElement
+    this.draggedElement = target
+    target.classList.add('dragging')
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/html', target.innerHTML)
+    }
+  }
+
+  private handleDragEnd(e: DragEvent) {
+    const target = e.currentTarget as HTMLElement
+    target.classList.remove('dragging')
+    this.draggedElement = null
+
+    // Remove all drag-over classes
+    document
+      .querySelectorAll('.service-item')
+      .forEach((item) => item.classList.remove('drag-over'))
+  }
+
+  private handleDragOver(e: DragEvent) {
+    e.preventDefault()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move'
+    }
+    return false
+  }
+
+  private handleDragEnter(e: DragEvent) {
+    const target = e.currentTarget as HTMLElement
+    if (target !== this.draggedElement) {
+      target.classList.add('drag-over')
+    }
+  }
+
+  private handleDragLeave(e: DragEvent) {
+    const target = e.currentTarget as HTMLElement
+    target.classList.remove('drag-over')
+  }
+
+  private handleDrop(e: DragEvent) {
+    e.stopPropagation()
+    e.preventDefault()
+
+    const target = e.currentTarget as HTMLElement
+    target.classList.remove('drag-over')
+
+    if (!this.draggedElement || this.draggedElement === target) {
+      return false
+    }
+
+    const draggedIndex = parseInt(this.draggedElement.dataset.index || '0')
+    const targetIndex = parseInt(target.dataset.index || '0')
+
+    // Reorder the array
+    const newOrder = [...this.serviceOrder]
+    const [removed] = newOrder.splice(draggedIndex, 1)
+    newOrder.splice(targetIndex, 0, removed)
+
+    this.serviceOrder = newOrder
+    this.renderServiceList()
+
+    return false
+  }
+
+  private async saveServiceOrder() {
+    const btn = document.getElementById(
+      'save-service-order-btn',
+    ) as HTMLButtonElement
+    const status = document.getElementById('service-order-status')
+
+    if (!btn || !status) return
+
+    btn.disabled = true
+    btn.textContent = 'Saving...'
+
+    try {
+      await Api.saveBusServiceOrder(this.serviceOrder)
+      this.showStatus(status, 'Service order saved!', 'success')
+    } catch (error) {
+      this.showStatus(status, 'Error saving service order', 'error')
+    } finally {
+      btn.disabled = false
+      btn.textContent = 'Save Service Order'
     }
   }
 

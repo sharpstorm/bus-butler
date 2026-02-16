@@ -1079,3 +1079,101 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
 }
+
+/* Bus Service Ordering Styles */
+.service-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  min-height: 100px;
+  padding: 0.5rem;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-secondary);
+}
+
+.service-list.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  font-size: 0.875rem;
+}
+
+.service-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: grab;
+  transition: all var(--transition-base);
+}
+
+.service-item:hover {
+  background: var(--color-bg-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.service-item:active {
+  cursor: grabbing;
+}
+
+.service-item.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+.service-item.drag-over {
+  border-color: var(--color-accent);
+  border-width: 2px;
+  background: var(--color-bg-primary);
+}
+
+.service-handle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-text-tertiary);
+  cursor: grab;
+}
+
+.service-handle span {
+  width: 16px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.service-number {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: var(--color-text-primary);
+}
+
+.service-remove {
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all var(--transition-base);
+}
+
+.service-remove:hover {
+  background: var(--color-error);
+  color: white;
+}
+
+.section-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+}

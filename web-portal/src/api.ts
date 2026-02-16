@@ -20,6 +20,10 @@ export type BusStopCodeRespBody = {
   busStopCode: string | null
 }
 
+export type BusServiceOrderRespBody = {
+  order: string[]
+}
+
 export type WeatherTownRespBody = {
   town: string | null
 }
@@ -120,6 +124,22 @@ export class Api {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ busStopCode }),
+    }).then((x) => x.json())
+    return resp
+  }
+
+  static async getBusServiceOrder() {
+    const resp = await fetch('/api/config/bus-service-order').then((x) =>
+      x.json(),
+    )
+    return resp as BusServiceOrderRespBody
+  }
+
+  static async saveBusServiceOrder(order: string[]) {
+    const resp = await fetch('/api/config/bus-service-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order }),
     }).then((x) => x.json())
     return resp
   }

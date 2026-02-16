@@ -18,7 +18,7 @@ void WeatherConfigApi::listWeatherRegions(AsyncWebServerRequest* request) {
 void WeatherConfigApi::getWeatherRegion(AsyncWebServerRequest* request) {
   String region = configManager.getWeatherRegion();
 
-  request->send(200, MimeType::JSON, "{ \"region\": " + region + " }");
+  request->send(200, MimeType::JSON, "{ \"region\": \"" + region + "\" }");
 }
 
 void WeatherConfigApi::saveWeatherRegion(AsyncWebServerRequest* request,

@@ -49,6 +49,13 @@ export const MOCK_SCENARIOS = {
   initialBusStopCode: '83139',
 
   /**
+   * Set initial bus service order (comma-separated)
+   * Empty string = no custom order (uses API order)
+   * Example: '73,156,74' to show services in that order
+   */
+  initialBusServiceOrder: ['73', '156', '74', '88', '130'],
+
+  /**
    * Set initial weather configuration
    */
   initialWeatherTown: 'Ang Mo Kio',
@@ -65,9 +72,10 @@ export const MOCK_SCENARIOS = {
   emptyBusData: false,
 
   /**
-   * Number of bus services to return (1-5)
+   * Number of bus services to return (1-12)
+   * Set to 7+ to test pagination (>6 services)
    */
-  busServiceCount: 3,
+  busServiceCount: 8,
 
   /**
    * Simulate arriving bus (0 seconds)

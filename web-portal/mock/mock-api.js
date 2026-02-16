@@ -10,6 +10,7 @@ const mockState = {
   lta: {
     apiKey: MOCK_SCENARIOS.initialLtaApiKey,
     busStopCode: MOCK_SCENARIOS.initialBusStopCode,
+    busServiceOrder: MOCK_SCENARIOS.initialBusServiceOrder || '',
   },
   weather: {
     town: MOCK_SCENARIOS.initialWeatherTown,
@@ -108,6 +109,25 @@ export function createMockApiMiddleware() {
   app.get('/api/config/busstop-code', async (req, res) => {
     await handleRequest(res, () => {
       res.json({ busStopCode: mockState.lta.busStopCode })
+    })
+  })
+
+  // Bus Service Order APIs
+  app.get('/api/config/bus-service-order', async (req, res) => {
+    await handleRequest(res, () => {
+      res.json({ order: mockState.lta.busServiceOrder })
+    })
+  })
+
+  app.post('/api/config/bus-service-order', async (req, res) => {
+    await handleRequest(res, () => {
+      const { order } = req.body
+      if (order === undefined) {
+        return res.status(400).json({ success: false })
+      }
+      mockState.lta.busServiceOrder = order
+      console.log(`✓ Bus service order saved: ${order}`)
+      res.json({ success: true })
     })
   })
 
@@ -246,7 +266,7 @@ export function createMockApiMiddleware() {
       const now = Math.floor(Date.now() / 1000)
 
       const services = []
-      const serviceCount = Math.min(MOCK_SCENARIOS.busServiceCount, 5)
+      const serviceCount = Math.min(MOCK_SCENARIOS.busServiceCount, 12)
 
       const mockServices = [
         { number: '73', company: 'SBST' },
@@ -254,6 +274,13 @@ export function createMockApiMiddleware() {
         { number: '74', company: 'SBST' },
         { number: '88', company: 'SMRT' },
         { number: '130', company: 'SBST' },
+        { number: '188', company: 'SMRT' },
+        { number: '190', company: 'SBST' },
+        { number: '65', company: 'SMRT' },
+        { number: '80', company: 'SBST' },
+        { number: '961', company: 'SMRT' },
+        { number: '963', company: 'SBST' },
+        { number: '188R', company: 'SMRT' },
       ]
 
       for (let i = 0; i < serviceCount; i++) {
@@ -348,6 +375,7 @@ export function createMockApiMiddleware() {
   console.log('\n📝 Current Mock Scenarios:')
   console.log(`   Initial WiFi: ${mockState.wifi.ssid || 'Not configured'}`)
   console.log(`   Initial Bus Stop: ${mockState.lta.busStopCode}`)
+  console.log(`   Initial Bus Service Order: ${mockState.lta.busServiceOrder || 'None (uses API order)'}`)
   console.log(
     `   Initial Weather: ${mockState.weather.town}, ${mockState.weather.region}`,
   )
@@ -356,6 +384,7 @@ export function createMockApiMiddleware() {
   if (MOCK_SCENARIOS.simulateSlowNetwork) {
     console.log(`   Network Delay: ${MOCK_SCENARIOS.networkDelay}ms`)
   }
+  console.log(`   Bus Service Count: ${MOCK_SCENARIOS.busServiceCount}`)
   console.log(`   Empty Bus Data: ${MOCK_SCENARIOS.emptyBusData}`)
   console.log(`   Weather API Failed: ${MOCK_SCENARIOS.weatherApiFailed}`)
   console.log('\n💡 Edit mock-scenarios.js to change test scenarios')
