@@ -109,8 +109,8 @@ void WeatherRenderer::drawWeatherIcon(int16_t x, int16_t y,
 
 void WeatherRenderer::renderWeatherIndicator(WeatherCondition condition,
                                              const String& label,
-                                             bool isTwoHour,
-                                             const String& temp) {
+                                             bool isTwoHour, const String& temp,
+                                             const String& timePeriod) {
   int footerY = SCREEN_HEIGHT - FOOTER_HEIGHT;
 
   // Weather indicator area: between date/time and buttons
@@ -152,6 +152,11 @@ void WeatherRenderer::renderWeatherIndicator(WeatherCondition condition,
   if (temp.length() > 0) {
     gfx->setTextColor(NEON_ORANGE);
     ScreenRenderer::drawText(temp, weatherX + 95, footerY + 28);
+  }
+
+  if (timePeriod.length() > 0) {
+    gfx->setTextColor(NEON_PINK);
+    ScreenRenderer::drawText(timePeriod, weatherX + 95, footerY + 42);
   }
 
   // Small decorative accent

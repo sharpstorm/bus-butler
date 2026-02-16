@@ -18,7 +18,7 @@
 using namespace std;
 
 // Weather display mode for cycling
-enum class WeatherDisplayMode { TwoHour, TwentyFourHour };
+enum class WeatherDisplayMode { TwoHour, Morning, Afternoon, Night, Midnight };
 
 class HomescreenState : public IAppState {
  private:

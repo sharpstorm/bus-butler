@@ -236,6 +236,22 @@ void ConfigTestApi::queryWeather(AsyncWebServerRequest* request) {
     nightForecast = tfResp->night.regionNorth;
   nightObj["forecast"] = weatherConditionToString(nightForecast);
 
+  // Night period
+  JsonObject midnightObj = periods.add<JsonObject>();
+  midnightObj["timePeriod"] = "Midnight";
+  WeatherCondition midnightForecast = WeatherCondition::Unknown;
+  if (region == "west")
+    midnightForecast = tfResp->midnight.regionWest;
+  else if (region == "east")
+    midnightForecast = tfResp->midnight.regionEast;
+  else if (region == "central")
+    midnightForecast = tfResp->midnight.regionCentral;
+  else if (region == "south")
+    midnightForecast = tfResp->midnight.regionSouth;
+  else if (region == "north")
+    midnightForecast = tfResp->midnight.regionNorth;
+  midnightObj["forecast"] = weatherConditionToString(midnightForecast);
+
   AsyncResponseStream* response = request->beginResponseStream(MimeType::JSON);
   serializeJson(root, *response);
   request->send(response);

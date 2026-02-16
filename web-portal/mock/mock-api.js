@@ -363,6 +363,10 @@ export function createMockApiMiddleware() {
               timePeriod: 'Night',
               forecast: MOCK_SCENARIOS.weatherForecast.night,
             },
+            {
+              timePeriod: 'Midnight',
+              forecast: MOCK_SCENARIOS.weatherForecast.midnight,
+            },
           ],
         },
       })

@@ -91,9 +91,26 @@ void HomescreenState::loop() {
   if (timeNow - lastWeatherDisplayToggleTimestamp >
       WEATHER_TOGGLE_INTERVAL_SECS) {
     lastWeatherDisplayToggleTimestamp = timeNow;
-    currentWeatherMode = (currentWeatherMode == WeatherDisplayMode::TwoHour)
-                             ? WeatherDisplayMode::TwentyFourHour
-                             : WeatherDisplayMode::TwoHour;
+
+    // Cycle through all weather display modes
+    switch (currentWeatherMode) {
+      case WeatherDisplayMode::TwoHour:
+        currentWeatherMode = WeatherDisplayMode::Morning;
+        break;
+      case WeatherDisplayMode::Morning:
+        currentWeatherMode = WeatherDisplayMode::Afternoon;
+        break;
+      case WeatherDisplayMode::Afternoon:
+        currentWeatherMode = WeatherDisplayMode::Night;
+        break;
+      case WeatherDisplayMode::Night:
+        currentWeatherMode = WeatherDisplayMode::TwoHour;
+        break;
+      case WeatherDisplayMode::Midnight:
+        currentWeatherMode = WeatherDisplayMode::Midnight;
+        break;
+    }
+
     paintWeatherIndicator();
     busArrivalRenderer.finalize();
   }
@@ -119,9 +136,24 @@ void HomescreenState::handleTouch(int x, int y) {
   // Weather area tap - toggle display mode
   else if (isInHitbox(x, y, 150, SCREEN_HEIGHT - FOOTER_HEIGHT, 230,
                       FOOTER_HEIGHT)) {
-    currentWeatherMode = (currentWeatherMode == WeatherDisplayMode::TwoHour)
-                             ? WeatherDisplayMode::TwentyFourHour
-                             : WeatherDisplayMode::TwoHour;
+    // Cycle through all weather display modes
+    switch (currentWeatherMode) {
+      case WeatherDisplayMode::TwoHour:
+        currentWeatherMode = WeatherDisplayMode::Morning;
+        break;
+      case WeatherDisplayMode::Morning:
+        currentWeatherMode = WeatherDisplayMode::Afternoon;
+        break;
+      case WeatherDisplayMode::Afternoon:
+        currentWeatherMode = WeatherDisplayMode::Night;
+        break;
+      case WeatherDisplayMode::Night:
+        currentWeatherMode = WeatherDisplayMode::Midnight;
+        break;
+      case WeatherDisplayMode::Midnight:
+        currentWeatherMode = WeatherDisplayMode::TwoHour;
+        break;
+    }
     lastWeatherDisplayToggleTimestamp = TimeUtil::getUnixTime();
     paintWeatherIndicator();
     busArrivalRenderer.finalize();
@@ -266,10 +298,10 @@ void HomescreenState::paintWeatherIndicator() {
 
     String label = weatherConditionToShortString(condition);
 
-    weatherRenderer.renderWeatherIndicator(condition, label, true, "");
+    weatherRenderer.renderWeatherIndicator(condition, label, true, "", "");
 
   } else {
-    // 24 hour forecast
+    // 24 hour forecast - Morning, Afternoon, or Night
     if (cachedTwentyFourHourForecast == nullptr) {
       weatherRenderer.renderWeatherError("Loading...");
       return;
@@ -282,22 +314,61 @@ void HomescreenState::paintWeatherIndicator() {
         String(cachedTwentyFourHourForecast->temperature.low) + "-" +
         String(cachedTwentyFourHourForecast->temperature.high) + "C";
 
-    // Get forecast text for region
-    WeatherCondition condition;
-    if (region == "west") {
-      condition = cachedTwentyFourHourForecast->morning.regionWest;
-    } else if (region == "east") {
-      condition = cachedTwentyFourHourForecast->morning.regionEast;
-    } else if (region == "central") {
-      condition = cachedTwentyFourHourForecast->morning.regionCentral;
-    } else if (region == "north") {
-      condition = cachedTwentyFourHourForecast->morning.regionNorth;
-    } else if (region == "south") {
-      condition = cachedTwentyFourHourForecast->morning.regionSouth;
+    // Select the appropriate period forecast
+    PeriodForecast* periodForecast = nullptr;
+    String periodLabel = "";
+
+    switch (currentWeatherMode) {
+      case WeatherDisplayMode::Morning:
+        periodForecast = &cachedTwentyFourHourForecast->morning;
+        periodLabel = MORNING_STRING;
+        break;
+      case WeatherDisplayMode::Afternoon:
+        periodForecast = &cachedTwentyFourHourForecast->afternoon;
+        periodLabel = AFTERNOON_STRING;
+        break;
+      case WeatherDisplayMode::Night:
+        periodForecast = &cachedTwentyFourHourForecast->night;
+        periodLabel = NIGHT_STRING;
+        break;
+      case WeatherDisplayMode::Midnight:
+        periodForecast = &cachedTwentyFourHourForecast->midnight;
+        periodLabel = MIDNIGHT_STRING;
+        break;
+      default:
+        break;
     }
 
-    String label = weatherConditionToShortString(condition);
-    weatherRenderer.renderWeatherIndicator(condition, label, false, tempRange);
+    if (periodForecast == nullptr) {
+      weatherRenderer.renderWeatherError("Error");
+      return;
+    }
+
+    // Get forecast for the configured region
+    WeatherCondition condition;
+    if (region == "west") {
+      condition = periodForecast->regionWest;
+    } else if (region == "east") {
+      condition = periodForecast->regionEast;
+    } else if (region == "central") {
+      condition = periodForecast->regionCentral;
+    } else if (region == "north") {
+      condition = periodForecast->regionNorth;
+    } else if (region == "south") {
+      condition = periodForecast->regionSouth;
+    } else {
+      condition = periodForecast->regionCentral;  // Default to central
+    }
+
+    String conditionLabel = weatherConditionToShortString(condition);
+
+    // Capitalize first letter if needed
+    if (periodLabel.length() > 0) {
+      periodLabel[0] = toupper(periodLabel[0]);
+    }
+
+    weatherRenderer.renderWeatherIndicator(condition, conditionLabel, false,
+                                           tempRange, periodLabel);
   }
 }
 

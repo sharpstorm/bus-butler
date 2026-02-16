@@ -6,6 +6,11 @@
 
 using namespace std;
 
+#define MORNING_STRING "6 am to midday"
+#define AFTERNOON_STRING "midday to 6 pm"
+#define NIGHT_STRING "6 pm to midnight"
+#define MIDNIGHT_STRING "midnight to 6 am"
+
 // Forecast conditions returned by NEA
 enum class WeatherCondition {
   Fair,
@@ -75,6 +80,7 @@ struct TwentyFourHourForecastResponse {
   PeriodForecast morning;
   PeriodForecast afternoon;
   PeriodForecast night;
+  PeriodForecast midnight;
 };
 
 // Utility functions

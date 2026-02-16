@@ -12,7 +12,8 @@ class WeatherRenderer {
 
  public:
   void renderWeatherIndicator(WeatherCondition condition, const String& label,
-                              bool isTwoHour, const String& temp);
+                              bool isTwoHour, const String& temp,
+                              const String& timePeriod);
   void renderWeatherError(const char* errorText);
   void finalize();
 };

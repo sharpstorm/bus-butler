@@ -100,6 +100,7 @@ export const MOCK_SCENARIOS = {
     morning: 'Partly Cloudy',
     afternoon: 'Thundery Showers',
     night: 'Fair',
+    midnight: 'Fair',
   },
 }
 

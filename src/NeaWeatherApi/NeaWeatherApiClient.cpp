@@ -213,11 +213,13 @@ NeaWeatherClient::getTwentyFourHourForecast() {
       PeriodForecast pf = parsePeriodForecast(periodObj);
       pf.timePeriod = timePeriod;
 
-      if (timePeriod.indexOf("morning") >= 0) {
+      if (timePeriod.indexOf(MIDNIGHT_STRING) >= 0) {
+        resp->midnight = pf;
+      } else if (timePeriod.indexOf(MORNING_STRING) >= 0) {
         resp->morning = pf;
-      } else if (timePeriod.indexOf("afternoon") >= 0) {
+      } else if (timePeriod.indexOf(AFTERNOON_STRING) >= 0) {
         resp->afternoon = pf;
-      } else if (timePeriod.indexOf("night") >= 0) {
+      } else if (timePeriod.indexOf(NIGHT_STRING) >= 0) {
         resp->night = pf;
       }
     }
