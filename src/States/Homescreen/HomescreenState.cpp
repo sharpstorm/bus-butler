@@ -1,6 +1,10 @@
 #include "HomescreenState.h"
 
+#include "../../Cache/BusArrivalCacheMutator.h"
+#include "../../Cache/NetworkDataCache.h"
+#include "../../Cache/WeatherCacheMutator.h"
 #include "../../Config/ConfigManager.h"
+#include "../../LtaDatamallClient/LtaDatamallClient.h"
 #include "../../Screen/Colors.h"
 #include "../../Screen/Fonts/BusTypes.h"
 #include "../../Screen/Screen.h"
@@ -12,34 +16,17 @@
 
 using namespace std;
 
-struct QueryBusArrivalWorkerDto {
-  String busStopCode;
-  unique_ptr<BusArrivalApiResponse>* cachedBusArrivalPtr;
-  int32_t* lastBusArrivalApiTimestampPtr;
-  bool* isBusArrivalFetchInProgressPtr;
-  LtaDatamallClient* client;
-};
-
-struct WeatherQueryDto {
-  NeaWeatherClient* client;
-  bool queryTwoHour;
-  bool queryTwentyFourHour;
-  unique_ptr<TwoHourForecastResponse>* twoHourResponsePtr;
-  unique_ptr<TwentyFourHourForecastResponse>* twentyFourHourResponsePtr;
-  int32_t* lastWeatherApiTimestampPtr;
-  bool* isWeatherFetchInProgressPtr;
-};
-
 void HomescreenState::enter() {
   gfx->fillScreen(BG_DARK);
   LayoutRenderer::renderHeader();
   LayoutRenderer::renderFooter();
   gfx->flush();
 
-  lastBusArrivalApiTimestamp = -1;
+  busArrivalQuery.invalidateCache();
+  weatherQuery.invalidateCache();
+
   lastBusArrivalPaintTimestamp = -1;
   lastDateTimePaintTimestamp = -1;
-  lastWeatherApiTimestamp = -1;
   lastWeatherDisplayToggleTimestamp = -1;
   currentWeatherMode = WeatherDisplayMode::TwoHour;
 
@@ -56,7 +43,7 @@ void HomescreenState::enter() {
 
   ltaDatamallClient.reconfigure();
   if (!ltaDatamallClient.isConfigured()) {
-    lastBusArrivalApiTimestamp = INT32_MAX;
+    busArrivalQuery.disable();
     lastBusArrivalPaintTimestamp = INT32_MAX;
     busArrivalRenderer.renderError("API not configured");
   }
@@ -68,8 +55,7 @@ void HomescreenState::loop() {
   long timeNow = TimeUtil::getUnixTime();
 
   // Refresh bus data every 60 seconds
-  if (timeNow - lastBusArrivalApiTimestamp > 60 &&
-      !isBusArrivalFetchInProgress) {
+  if (busArrivalQuery.shouldFetch()) {
     updateBusArrivalCache();
     paintBusArrivalCache();
   }
@@ -80,9 +66,8 @@ void HomescreenState::loop() {
   }
 
   // Refresh weather data every 5 minutes
-  if (timeNow - lastWeatherApiTimestamp > WEATHER_REFRESH_INTERVAL_SECS &&
-      !isWeatherFetchInProgress) {
-    updateWeatherCache();
+  if (weatherQuery.shouldFetch()) {
+    weatherQuery.updateCache();
     paintWeatherIndicator();
     busArrivalRenderer.finalize();
   }
@@ -126,8 +111,8 @@ void HomescreenState::loop() {
 void HomescreenState::handleTouch(int x, int y) {
   // Refresh button
   if (isInHitbox(x, y, SCREEN_WIDTH - 40, SCREEN_HEIGHT - 50, 32, 32)) {
-    lastBusArrivalApiTimestamp = 0;
-    lastWeatherApiTimestamp = 0;
+    busArrivalQuery.invalidateCache();
+    weatherQuery.invalidateCache();
   }
   // Settings button
   else if (isInHitbox(x, y, SCREEN_WIDTH - 80, SCREEN_HEIGHT - 50, 32, 32)) {
@@ -160,35 +145,6 @@ void HomescreenState::handleTouch(int x, int y) {
   }
 }
 
-void HomescreenState::queryBusArrivalWorker(void* pvParameters) {
-  QueryBusArrivalWorkerDto* dtoPtr = (QueryBusArrivalWorkerDto*)(pvParameters);
-  *dtoPtr->cachedBusArrivalPtr =
-      dtoPtr->client->getBusArrival(dtoPtr->busStopCode);
-  *dtoPtr->lastBusArrivalApiTimestampPtr = TimeUtil::getUnixTime();
-  *dtoPtr->isBusArrivalFetchInProgressPtr = false;
-
-  delete dtoPtr;
-  vTaskDelete(NULL);
-}
-
-void HomescreenState::queryWeatherWorker(void* pvParameters) {
-  WeatherQueryDto* dtoPtr = (WeatherQueryDto*)(pvParameters);
-
-  if (dtoPtr->queryTwoHour) {
-    *dtoPtr->twoHourResponsePtr = dtoPtr->client->getTwoHourForecast();
-  }
-
-  if (dtoPtr->queryTwentyFourHour) {
-    *dtoPtr->twentyFourHourResponsePtr =
-        dtoPtr->client->getTwentyFourHourForecast();
-  }
-  *dtoPtr->lastWeatherApiTimestampPtr = TimeUtil::getUnixTime();
-  *dtoPtr->isWeatherFetchInProgressPtr = false;
-
-  delete dtoPtr;
-  vTaskDelete(NULL);
-}
-
 void HomescreenState::updateBusArrivalCache() {
   TaskHandle_t taskRef = NULL;
   String busStopCode = configManager.getBusStopCode();
@@ -196,55 +152,26 @@ void HomescreenState::updateBusArrivalCache() {
     busStopCode = TEST_BUS_STOP_CODE;
   }
 
+  auto cachedBusArrival = networkDataCache.cachedBusArrival.get();
   if (cachedBusArrival != nullptr &&
       cachedBusArrival->busStopCode != busStopCode) {
     busArrivalRenderer.clearContent();
   }
 
-  isBusArrivalFetchInProgress = true;
-  auto taskParams = new QueryBusArrivalWorkerDto{
-      busStopCode, &cachedBusArrival, &lastBusArrivalApiTimestamp,
-      &isBusArrivalFetchInProgress, &ltaDatamallClient};
-  TaskHandle_t taskHandle = NULL;
-  BaseType_t taskCreated = xTaskCreate(queryBusArrivalWorker, "homescreen-bus",
-                                       8192, taskParams, 1, &taskHandle);
-
-  if (taskCreated != pdPASS) {
-    delete taskParams;
-    isBusArrivalFetchInProgress = false;
-    Serial.println("Failed to create bus arrival query task");
+  if (!busArrivalQuery.updateCache(busStopCode)) {
+    busArrivalRenderer.clearContent();
     busArrivalRenderer.renderError("Task create failed");
-  }
-}
-
-void HomescreenState::updateWeatherCache() {
-  auto taskParams = new WeatherQueryDto{&neaWeatherClient,
-                                        true,
-                                        true,
-                                        &cachedTwoHourForecast,
-                                        &cachedTwentyFourHourForecast,
-                                        &lastWeatherApiTimestamp,
-                                        &isWeatherFetchInProgress};
-  isWeatherFetchInProgress = true;
-  TaskHandle_t taskHandle = NULL;
-  BaseType_t taskCreated = xTaskCreate(queryWeatherWorker, "homescreen-weather",
-                                       8192, taskParams, 1, &taskHandle);
-
-  if (taskCreated != pdPASS) {
-    Serial.println("Failed to create weather query task");
-    delete taskParams;
-    isWeatherFetchInProgress = false;
-    lastWeatherApiTimestamp = TimeUtil::getUnixTime();
   }
 }
 
 void HomescreenState::paintBusArrivalCache() {
   busArrivalRenderer.clearContent();
+  auto cachedBusArrival = networkDataCache.cachedBusArrival.get();
   if (cachedBusArrival == nullptr) {
     // Paint from settings
     busArrivalRenderer.renderBusStopCode(configManager.getBusStopCode());
     lastBusArrivalPaintTimestamp = TimeUtil::getUnixTime();
-    if (lastBusArrivalApiTimestamp > 0) {
+    if (busArrivalQuery.getLastApiCallTimestamp() > 0) {
       busArrivalRenderer.renderError("API request failed");
     }
     return;
@@ -288,13 +215,13 @@ void HomescreenState::paintWeatherIndicator() {
       return;
     }
 
-    if (cachedTwoHourForecast == nullptr) {
+    if (networkDataCache.cachedTwoHourForecast == nullptr) {
       weatherRenderer.renderWeatherError("Loading...");
       return;
     }
 
-    WeatherCondition condition =
-        neaWeatherClient.getForecastForArea(cachedTwoHourForecast.get(), town);
+    WeatherCondition condition = neaWeatherClient.getForecastForArea(
+        networkDataCache.cachedTwoHourForecast.get(), town);
 
     String label = weatherConditionToShortString(condition);
 
@@ -302,6 +229,8 @@ void HomescreenState::paintWeatherIndicator() {
 
   } else {
     // 24 hour forecast - Morning, Afternoon, or Night
+    auto cachedTwentyFourHourForecast =
+        networkDataCache.cachedTwentyFourHourForecast.get();
     if (cachedTwentyFourHourForecast == nullptr) {
       weatherRenderer.renderWeatherError("Loading...");
       return;
@@ -374,6 +303,7 @@ void HomescreenState::paintWeatherIndicator() {
 
 vector<BusArrivalServiceDetail*> HomescreenState::getSortedBusServices() {
   vector<BusArrivalServiceDetail*> result;
+  auto cachedBusArrival = networkDataCache.cachedBusArrival.get();
 
   if (cachedBusArrival == nullptr || cachedBusArrival->services.empty()) {
     return result;
@@ -442,8 +372,17 @@ void HomescreenState::handleTouchEnd(int x, int y) {
   int deltaX = x - touchStartX;
   int deltaY = abs(y - touchStartY);
 
+  // Check for vertical swipe down (go to weather forecast)
+  if (abs(deltaY) >= SWIPE_THRESHOLD && abs(deltaX) < SWIPE_MAX_DEVIATION) {
+    if (deltaY > 0) {
+      // Swipe down - go to weather forecast page
+      appStateManager.changeState(AppState::WeatherForecast);
+      return;
+    }
+  }
+
   // Must move horizontally more than threshold and not too much vertically
-  if (abs(deltaX) >= SWIPE_THRESHOLD && deltaY < SWIPE_MAX_Y_DEVIATION) {
+  if (abs(deltaX) >= SWIPE_THRESHOLD && deltaY < SWIPE_MAX_DEVIATION) {
     bool pageChanged = false;
 
     if (deltaX > 0) {

@@ -22,15 +22,17 @@ enum class WeatherDisplayMode { TwoHour, Morning, Afternoon, Night, Midnight };
 
 class HomescreenState : public IAppState {
  private:
+  // Track last paints
   int32_t lastDateTimePaintTimestamp = -1;
-
-  // Bus arrival state
-  int32_t lastBusArrivalApiTimestamp = -1;
   int32_t lastBusArrivalPaintTimestamp = -1;
-  bool isBusArrivalFetchInProgress = false;
-  unique_ptr<BusArrivalApiResponse> cachedBusArrival = nullptr;
+  int32_t lastWeatherDisplayToggleTimestamp = -1;
+
+  // Bus Arrival
   BusArrivalRenderer busArrivalRenderer;
-  LtaDatamallClient ltaDatamallClient;
+
+  // Weather
+  WeatherDisplayMode currentWeatherMode = WeatherDisplayMode::TwoHour;
+  WeatherRenderer weatherRenderer;
 
   // Pagination state
   uint8_t currentPage = 0;
@@ -40,27 +42,12 @@ class HomescreenState : public IAppState {
   int touchStartX = -1;
   int touchStartY = -1;
   bool isSwipeInProgress = false;
-  static constexpr int SWIPE_THRESHOLD = 80;        // Minimum pixels for swipe
-  static constexpr int SWIPE_MAX_Y_DEVIATION = 50;  // Max vertical movement
-
-  // Weather state
-  int32_t lastWeatherApiTimestamp = -1;
-  int32_t lastWeatherDisplayToggleTimestamp = -1;
-  bool isWeatherFetchInProgress = false;
-  unique_ptr<TwoHourForecastResponse> cachedTwoHourForecast = nullptr;
-  unique_ptr<TwentyFourHourForecastResponse> cachedTwentyFourHourForecast =
-      nullptr;
-  NeaWeatherClient neaWeatherClient;
-  WeatherDisplayMode currentWeatherMode = WeatherDisplayMode::TwoHour;
-  WeatherRenderer weatherRenderer;
-
-  // Worker functions
-  static void queryBusArrivalWorker(void* pvParameters);
-  static void queryWeatherWorker(void* pvParameters);
+  static constexpr int SWIPE_THRESHOLD = 80;  // Minimum pixels for swipe
+  static constexpr int SWIPE_MAX_DEVIATION =
+      50;  // Max movement in perpendicular direction
 
   // Update functions
   void updateBusArrivalCache();
-  void updateWeatherCache();
   void paintBusArrivalCache();
   void paintWeatherIndicator();
 
@@ -71,8 +58,6 @@ class HomescreenState : public IAppState {
 
   static constexpr TickType_t API_QUERY_TIMEOUT_TICKS = pdMS_TO_TICKS(15000);
 
-  // Weather refresh interval: 5 minutes
-  static constexpr int32_t WEATHER_REFRESH_INTERVAL_SECS = 300;
   // Weather display toggle interval: 15 seconds
   static constexpr int32_t WEATHER_TOGGLE_INTERVAL_SECS = 15;
 

@@ -34,3 +34,4 @@ class LtaDatamallClient {
 };
 
 extern const char* ltaDatamallCaCert;
+extern LtaDatamallClient ltaDatamallClient;

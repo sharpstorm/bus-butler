@@ -6,7 +6,6 @@
 #include "../Wifi/WifiManager.h"
 
 NeaWeatherClient::NeaWeatherClient() {
-  // Use insecure mode - data.gov.sg uses Let's Encrypt which rotates frequently
   wifiClient.setCACert(dataGovCaCert);
   httpClient.useHTTP10(true);
 }
@@ -267,3 +266,5 @@ WeatherCondition NeaWeatherClient::getForecastForArea(
 
   return WeatherCondition::Unknown;
 }
+
+NeaWeatherClient neaWeatherClient;

@@ -42,3 +42,4 @@ class NeaWeatherClient {
 };
 
 extern const char* dataGovCaCert;
+extern NeaWeatherClient neaWeatherClient;

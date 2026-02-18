@@ -118,3 +118,5 @@ BusArrivalDetail LtaDatamallClient::fromJsonResponse(JsonObject resp) {
       TimeUtil::iso8601StringToUnixTime(resp["EstimatedArrival"].as<String>()),
   };
 }
+
+LtaDatamallClient ltaDatamallClient;
