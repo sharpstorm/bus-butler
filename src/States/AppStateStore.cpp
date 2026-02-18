@@ -16,6 +16,8 @@ IAppState* AppStateStore::getStateRefById(AppState state) {
       return &homescreenState;
     case AppState::Settings:
       return &settingsState;
+    case AppState::WeatherForecast:
+      return &weatherForecastState;
     default:
       return nullptr;
   }

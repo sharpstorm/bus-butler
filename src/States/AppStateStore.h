@@ -5,6 +5,7 @@
 #include "IAppState.h"
 #include "Settings/SettingsState.h"
 #include "Setup/SetupState.h"
+#include "WeatherForecast/WeatherForecastState.h"
 
 /*
   This class is only meant to act as a store, and registers itself with
@@ -16,6 +17,7 @@ class AppStateStore : public IAppStateResolver {
   SetupState setupState;
   HomescreenState homescreenState;
   SettingsState settingsState;
+  WeatherForecastState weatherForecastState;
 
  public:
   AppStateStore();
