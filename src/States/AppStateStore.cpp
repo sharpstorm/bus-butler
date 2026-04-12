@@ -18,6 +18,8 @@ IAppState* AppStateStore::getStateRefById(AppState state) {
       return &settingsState;
     case AppState::WeatherForecast:
       return &weatherForecastState;
+    case AppState::ShowBusStopQr:
+      return &showBusStopQrState;
     default:
       return nullptr;
   }

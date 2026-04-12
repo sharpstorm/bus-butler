@@ -142,6 +142,9 @@ void HomescreenState::handleTouch(int x, int y) {
     lastWeatherDisplayToggleTimestamp = TimeUtil::getUnixTime();
     paintWeatherIndicator();
     busArrivalRenderer.finalize();
+  } else if (isInHitbox(x, y, HEADER_L_BOX_X, 0, HEADER_L_BOX_WIDTH,
+                        HEADER_HEIGHT)) {
+    appStateManager.changeState(AppState::ShowBusStopQr);
   }
 }
 

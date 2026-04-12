@@ -9,7 +9,15 @@ class IAppState : public ITouchHandler {
   virtual void exit() = 0;
 };
 
-enum AppState { Init = 0, Boot, Setup, Homescreen, Settings, WeatherForecast };
+enum AppState {
+  Init = 0,
+  Boot,
+  Setup,
+  Homescreen,
+  Settings,
+  WeatherForecast,
+  ShowBusStopQr
+};
 
 class IAppStateResolver {
  public:

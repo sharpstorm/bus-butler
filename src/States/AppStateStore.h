@@ -5,6 +5,7 @@
 #include "IAppState.h"
 #include "Settings/SettingsState.h"
 #include "Setup/SetupState.h"
+#include "ShowBusStopQr/ShowBusStopQrState.h"
 #include "WeatherForecast/WeatherForecastState.h"
 
 /*
@@ -18,6 +19,7 @@ class AppStateStore : public IAppStateResolver {
   HomescreenState homescreenState;
   SettingsState settingsState;
   WeatherForecastState weatherForecastState;
+  ShowBusStopQrState showBusStopQrState;
 
  public:
   AppStateStore();
