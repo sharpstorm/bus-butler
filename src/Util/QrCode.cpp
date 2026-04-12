@@ -34,10 +34,23 @@ void QrCode::rsEncode(uint8_t* data, int dataLen, uint8_t* ec, int ecLen) {
 
 uint8_t* QrCode::generate(const char* url, uint8_t version, int16_t req_size,
                           int16_t* out_size) {
-  if (version != 5 && version != 6) return nullptr;
+  if (version < 3 || version > 6) return nullptr;
+
+  // Version parameters: {dataCap, ecLen, maxLen, alignPos}
+  // Low ECC, byte mode, single block (except v6 which uses 2 blocks)
+  static const int params[4][4] = {
+      {55, 15, 53, 22},    // Version 3
+      {80, 20, 78, 26},    // Version 4
+      {108, 26, 106, 30},  // Version 5
+      {136, 36, 134, 34},  // Version 6
+  };
+  int idx = version - 3;
+  int dataCap = params[idx][0];
+  int ecLen = params[idx][1];
+  int maxLen = params[idx][2];
+  int alignPos = params[idx][3];
 
   int len = strlen(url);
-  int maxLen = (version == 5) ? 106 : 134;
   if (len > maxLen) return nullptr;  // URL too long for version
 
   if (!tablesInitialized) {
@@ -68,7 +81,6 @@ uint8_t* QrCode::generate(const char* url, uint8_t version, int16_t req_size,
   addBits(0x0, 4);  // Terminator
   while (bitPos % 8 != 0) bitPos++;
 
-  int dataCap = (version == 5) ? 108 : 136;
   int padBytes[] = {0xEC, 0x11};
   int padIdx = 0;
   while (bitPos / 8 < dataCap) {
@@ -78,13 +90,15 @@ uint8_t* QrCode::generate(const char* url, uint8_t version, int16_t req_size,
   // 2. Interleaving & Error Correction
   uint8_t interleaved[200] = {0};
   int totalBits = 0;
-  if (version == 5) {
+  if (version <= 5) {
+    // Versions 3-5: Single block
     uint8_t ec[26] = {0};
-    rsEncode(bitstream, 108, ec, 26);
-    memcpy(interleaved, bitstream, 108);
-    memcpy(interleaved + 108, ec, 26);
-    totalBits = 134 * 8;
+    rsEncode(bitstream, dataCap, ec, ecLen);
+    memcpy(interleaved, bitstream, dataCap);
+    memcpy(interleaved + dataCap, ec, ecLen);
+    totalBits = (dataCap + ecLen) * 8;
   } else {
+    // Version 6: 2 blocks of 68 data + 18 EC each
     uint8_t ec1[18] = {0}, ec2[18] = {0};
     rsEncode(bitstream, 68, ec1, 18);
     rsEncode(bitstream + 68, 68, ec2, 18);
@@ -101,7 +115,7 @@ uint8_t* QrCode::generate(const char* url, uint8_t version, int16_t req_size,
   }
 
   // 3. Matrix Placement
-  int W = (version == 5) ? 37 : 41;
+  int W = 17 + 4 * version;  // v3=29, v4=33, v5=37, v6=41
   int8_t* grid = (int8_t*)malloc(W * W);
   memset(grid, -1, W * W);
 
@@ -135,8 +149,7 @@ uint8_t* QrCode::generate(const char* url, uint8_t version, int16_t req_size,
       }
     }
   };
-  if (version == 5) drawAlignment(30, 30);
-  if (version == 6) drawAlignment(34, 34);
+  drawAlignment(alignPos, alignPos);
 
   // Timing & Dark Module
   for (int i = 8; i < W - 8; i++) {

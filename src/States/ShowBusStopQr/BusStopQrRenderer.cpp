@@ -13,11 +13,11 @@ void BusStopQrRenderer::renderLayout(const String& busStopCode) {
   int16_t final_size = 0;
   String url = "https://bus.gov.sg/stops/" + busStopCode;
 
-  uint8_t* qrBitmap = QrCode::generate(url.c_str(), 5, 200, &final_size);
+  uint8_t* qrBitmap = QrCode::generate(url.c_str(), 3, 200, &final_size);
 
   if (qrBitmap != nullptr) {
     gfx->drawBitmap(20, HEADER_HEIGHT + 10, qrBitmap, final_size, final_size,
-                    BLACK, WHITE);
+                    WHITE, BG_CARD);
     free(qrBitmap);
   }
 
