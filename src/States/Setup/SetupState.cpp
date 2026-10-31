@@ -8,7 +8,7 @@
 
 void SetupState::enter() {
   if (isSetupComplete()) {
-    appStateManager.changeState(AppState::Homescreen);
+    appStateManager.changeState(AppState::Boot);
     return;
   }
   setupRenderer.render();
@@ -24,8 +24,6 @@ void SetupState::exit() {
   mdnsClient.stop();
   webConfigServer.stop();
 }
-
-void SetupState::handleTouch(int x, int y) {}
 
 bool SetupState::isSetupComplete() {
   bool isWifiConfigured = wifiConfigManager.getConfig().isConfigured;

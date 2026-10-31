@@ -16,6 +16,19 @@ const mockState = {
     town: MOCK_SCENARIOS.initialWeatherTown,
     region: MOCK_SCENARIOS.initialWeatherRegion,
   },
+  stops: MOCK_SCENARIOS.initialStops || [],
+  activeStop: 0,
+  display: {
+    brightness: 70,
+    idleDimEnabled: true,
+    idleDimMinutes: 5,
+    idleDimLevel: 10,
+    nightEnabled: false,
+    nightTheme: true,
+    nightStart: '23:00',
+    nightEnd: '07:00',
+    nightLevel: 5,
+  },
 }
 
 // Helper to add artificial delay
@@ -395,5 +408,119 @@ export function createMockApiMiddleware() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
 
   // Return the Express app as middleware
+  // Multi-stop APIs
+  const MOCK_STOP_NAMES = {
+    17179: 'Opp Clementi Stn',
+    17171: 'Clementi Stn',
+    83139: 'Blk 10',
+    '01012': 'Hotel Grand Pacific',
+  }
+  const lookups = {}
+
+  app.get('/api/config/stops', async (req, res) => {
+    await handleRequest(res, () => {
+      res.json({ stops: mockState.stops, active: mockState.activeStop, max: 8 })
+    })
+  })
+
+  app.post('/api/config/stops', async (req, res) => {
+    await handleRequest(res, () => {
+      const { stops, active } = req.body
+      if (!Array.isArray(stops)) {
+        return res.status(400).json({ error: 'stops must be an array' })
+      }
+      if (stops.some((s) => !/^\d{5}$/.test(s.code))) {
+        return res.status(400).json({ error: 'Bus stop codes are 5 digits' })
+      }
+      mockState.stops = stops.slice(0, 8)
+      mockState.activeStop = active < mockState.stops.length ? active : 0
+      res.json({ success: true })
+    })
+  })
+
+  app.post('/api/stops/lookup', async (req, res) => {
+    const { code } = req.body
+    lookups[code] = Date.now()
+    res.status(202).json({ status: 'pending' })
+  })
+
+  app.get('/api/stops/lookup', async (req, res) => {
+    const { code } = req.query
+    if (!lookups[code]) return res.json({ status: 'unknown' })
+    if (Date.now() - lookups[code] < 2500) return res.json({ status: 'pending' })
+    if (MOCK_STOP_NAMES[code]) {
+      return res.json({ status: 'found', name: MOCK_STOP_NAMES[code] })
+    }
+    res.json({ status: 'not_found' })
+  })
+
+  // Display APIs
+  app.get('/api/config/display', async (req, res) => {
+    await handleRequest(res, () => res.json(mockState.display))
+  })
+
+  app.post('/api/config/display', async (req, res) => {
+    await handleRequest(res, () => {
+      Object.assign(mockState.display, req.body)
+      console.log('✓ Display config saved', req.body)
+      res.json({ success: true })
+    })
+  })
+
+  // Device APIs
+  const bootedAt = Date.now()
+  app.get('/api/status', async (req, res) => {
+    await handleRequest(res, () => {
+      const ago = (s) => ({ attempted: true, ok: true, error: 200, lastSuccessAgo: s })
+      res.json({
+        firmware: '2.0.0',
+        uptime: Math.floor((Date.now() - bootedAt) / 1000) + 93784,
+        clockSynced: true,
+        freeHeap: 142336,
+        freePsram: 8123456,
+        wifi: { ssid: mockState.wifi.ssid || 'Home WiFi', rssi: -58, ip: '192.168.1.42' },
+        display: { level: mockState.display.brightness, idleDimmed: false, nightActive: false },
+        activeStop: mockState.stops[mockState.activeStop]?.code ?? '',
+        sources: {
+          bus: ago(12),
+          mrt: ago(48),
+          forecast: ago(140),
+          readings: MOCK_SCENARIOS.weatherApiFailed
+            ? { attempted: true, ok: false, error: -1, lastSuccessAgo: 1820 }
+            : ago(305),
+        },
+      })
+    })
+  })
+
+  app.get('/api/mrt', async (req, res) => {
+    await handleRequest(res, () => {
+      const source = { attempted: true, ok: true, error: 200, lastSuccessAgo: 48 }
+      if (!MOCK_SCENARIOS.mrtDisruption) {
+        return res.json({ source, status: 'normal', segments: [], messages: [] })
+      }
+      res.json({
+        source,
+        status: 'disrupted',
+        segments: [
+          {
+            line: 'EWL',
+            lineName: 'East-West Line',
+            direction: 'Joo Koon',
+            stations: 'EW23,EW24,EW25',
+            freeBus: 'EW23,EW24,EW25',
+            freeShuttle: '',
+          },
+        ],
+        messages: [
+          '0815hrs: EWL - Additional travelling time of 10 minutes between Clementi and Jurong East due to a train fault. Free regular bus services are available between Clementi and Jurong East.',
+        ],
+      })
+    })
+  })
+
+  app.post('/api/refresh', (req, res) => res.status(202).json({ success: true }))
+  app.post('/api/restart', (req, res) => res.status(202).json({ success: true }))
+
   return app
 }

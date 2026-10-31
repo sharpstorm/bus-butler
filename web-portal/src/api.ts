@@ -78,7 +78,141 @@ export type WeatherRespBody = {
   }
 }
 
+export type BusStop = {
+  code: string
+  name: string
+}
+
+export type StopsRespBody = {
+  stops: BusStop[]
+  active: number
+  max: number
+}
+
+export type StopLookupRespBody = {
+  status: 'pending' | 'found' | 'not_found' | 'error' | 'unknown'
+  name?: string
+}
+
+export type DisplayConfig = {
+  brightness: number // percent
+  idleDimEnabled: boolean
+  idleDimMinutes: number
+  idleDimLevel: number // percent
+  nightEnabled: boolean
+  nightTheme: boolean
+  nightStart: string // HH:MM
+  nightEnd: string // HH:MM
+  nightLevel: number // percent
+}
+
+export type SourceStatus = {
+  attempted: boolean
+  ok: boolean
+  error: number
+  lastSuccessAgo: number | null
+}
+
+export type StatusRespBody = {
+  firmware: string
+  uptime: number
+  clockSynced: boolean
+  freeHeap: number
+  freePsram: number
+  wifi: { ssid: string; rssi: number; ip: string }
+  display: { level: number; idleDimmed: boolean; nightActive: boolean }
+  activeStop: string
+  sources: {
+    bus: SourceStatus
+    mrt: SourceStatus
+    forecast: SourceStatus
+    readings: SourceStatus
+  }
+}
+
+export type MrtSegment = {
+  line: string
+  lineName: string
+  direction: string
+  stations: string
+  freeBus: string
+  freeShuttle: string
+}
+
+export type MrtRespBody = {
+  source: SourceStatus
+  status: 'normal' | 'disrupted' | null
+  segments?: MrtSegment[]
+  messages?: string[]
+}
+
+async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const resp = await fetch(url, init)
+  let body: any = null
+  try {
+    body = await resp.json()
+  } catch {
+    // Some endpoints return an empty body on error
+  }
+  if (!resp.ok) {
+    throw new Error(body?.error || `Request failed (${resp.status})`)
+  }
+  return body as T
+}
+
+const postJson = <T>(url: string, body?: unknown) =>
+  request<T>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+
 export class Api {
+  // Bus stops
+  static getStops() {
+    return request<StopsRespBody>('/api/config/stops')
+  }
+
+  static saveStops(stops: BusStop[], active: number) {
+    return postJson<{ success: boolean }>('/api/config/stops', { stops, active })
+  }
+
+  static startStopLookup(code: string) {
+    return postJson<StopLookupRespBody>('/api/stops/lookup', { code })
+  }
+
+  static getStopLookup(code: string) {
+    return request<StopLookupRespBody>(
+      `/api/stops/lookup?code=${encodeURIComponent(code)}`,
+    )
+  }
+
+  // Display
+  static getDisplay() {
+    return request<DisplayConfig>('/api/config/display')
+  }
+
+  static saveDisplay(config: Partial<DisplayConfig>) {
+    return postJson<{ success: boolean }>('/api/config/display', config)
+  }
+
+  // Device
+  static getStatus() {
+    return request<StatusRespBody>('/api/status')
+  }
+
+  static getMrt() {
+    return request<MrtRespBody>('/api/mrt')
+  }
+
+  static refresh() {
+    return postJson<{ success: boolean }>('/api/refresh')
+  }
+
+  static restart() {
+    return postJson<{ success: boolean }>('/api/restart')
+  }
+
   // WiFi APIs
   static async scanWifiNetworks() {
     const resp = await fetch('/api/wifi/scan').then((x) => x.json())

@@ -1,12 +1,14 @@
 #pragma once
 
 #include "Boot/BootState.h"
-#include "Homescreen/HomescreenState.h"
+#include "Controls/ControlsState.h"
+#include "Home/HomeState.h"
 #include "IAppState.h"
-#include "Settings/SettingsState.h"
+#include "Mrt/MrtPageState.h"
 #include "Setup/SetupState.h"
-#include "ShowBusStopQr/ShowBusStopQrState.h"
-#include "WeatherForecast/WeatherForecastState.h"
+#include "Status/StatusPageState.h"
+#include "StopQr/StopQrState.h"
+#include "Weather/WeatherPageState.h"
 
 /*
   This class is only meant to act as a store, and registers itself with
@@ -16,10 +18,12 @@ class AppStateStore : public IAppStateResolver {
  private:
   BootState bootState;
   SetupState setupState;
-  HomescreenState homescreenState;
-  SettingsState settingsState;
-  WeatherForecastState weatherForecastState;
-  ShowBusStopQrState showBusStopQrState;
+  HomeState homeState;
+  WeatherPageState weatherPageState;
+  MrtPageState mrtPageState;
+  StatusPageState statusPageState;
+  StopQrState stopQrState;
+  ControlsState controlsState;
 
  public:
   AppStateStore();

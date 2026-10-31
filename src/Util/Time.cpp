@@ -67,6 +67,22 @@ String TimeUtil::getDateString() {
   return String(buf);
 }
 
+bool TimeUtil::localTime(struct tm& out) {
+  if (!getLocalTime(&out, 0)) return false;
+  return out.tm_year >= (2024 - 1900);
+}
+
+bool TimeUtil::isSynced() {
+  struct tm t;
+  return localTime(t);
+}
+
+String TimeUtil::fullDayName(int weekday) {
+  static const char* names[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
+                                "Thursday", "Friday", "Saturday"};
+  return names[weekday % 7];
+}
+
 TimeSyncer::TimeSyncer() {
   setenv("TZ", "UTC-8", 1);
   tzset();

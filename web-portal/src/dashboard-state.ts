@@ -1,953 +1,1068 @@
-import { Api, BusArrivalRespBody, WeatherRespBody, BusService } from './api'
+import {
+  Api,
+  BusArrival,
+  BusStop,
+  DisplayConfig,
+  MrtRespBody,
+  SourceStatus,
+  StatusRespBody,
+  WeatherRespBody,
+} from './api'
+
+type Section =
+  | 'overview'
+  | 'stops'
+  | 'display'
+  | 'weather'
+  | 'connection'
+  | 'diagnostics'
+
+const SECTIONS: Section[] = [
+  'overview',
+  'stops',
+  'display',
+  'weather',
+  'connection',
+  'diagnostics',
+]
+const STATUS_POLL_MS = 10_000
+const LOOKUP_POLL_MS = 1_500
+const LOOKUP_TIMEOUT_MS = 45_000
+
+// Official MRT line colours
+const LINE_COLORS: Record<string, string> = {
+  NSL: '#d42e12',
+  EWL: '#009645',
+  CGL: '#009645',
+  NEL: '#9900aa',
+  CCL: '#fa9e0d',
+  CEL: '#fa9e0d',
+  DTL: '#005ec4',
+  TEL: '#9d5b25',
+  BPL: '#748477',
+  SLRT: '#748477',
+  PLRT: '#748477',
+}
+
+const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
+  document.getElementById(id) as T
+
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  props: Partial<HTMLElementTagNameMap[K]> & { className?: string } = {},
+  ...children: (Node | string | null | undefined)[]
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag)
+  Object.assign(node, props)
+  for (const child of children) {
+    if (child === null || child === undefined) continue
+    node.append(child)
+  }
+  return node
+}
+
+const ICONS = {
+  up: '<path d="M6 15l6-6 6 6"/>',
+  down: '<path d="M6 9l6 6 6-6"/>',
+  remove: '<path d="M6 6l12 12M18 6L6 18"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+}
+
+function iconButton(
+  icon: keyof typeof ICONS,
+  label: string,
+  onClick: () => void,
+  className = '',
+) {
+  const btn = el('button', {
+    type: 'button',
+    className: `icon-btn ${className}`.trim(),
+    title: label,
+  })
+  btn.setAttribute('aria-label', label)
+  btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[icon]}</svg>`
+  btn.addEventListener('click', onClick)
+  return btn
+}
+
+function agoText(seconds: number | null | undefined) {
+  if (seconds === null || seconds === undefined) return 'never'
+  if (seconds < 60) return `${seconds}s ago`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  return `${Math.floor(seconds / 86400)}d ago`
+}
+
+function durationText(seconds: number) {
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
+function bytesText(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1048576).toFixed(1)} MB`
+  return `${Math.round(bytes / 1024)} KB`
+}
+
+function signalText(rssi: number) {
+  if (rssi >= -60) return 'Strong'
+  if (rssi >= -70) return 'Good'
+  if (rssi >= -80) return 'Fair'
+  return 'Weak'
+}
+
+function setStatus(
+  target: HTMLElement,
+  message: string,
+  kind: 'success' | 'error' | 'info' | '' = '',
+) {
+  target.textContent = message
+  target.className = `status-message ${kind}`.trim()
+}
+
+async function withBusy<T>(
+  button: HTMLButtonElement,
+  busyLabel: string,
+  work: () => Promise<T>,
+): Promise<T> {
+  const label = button.textContent
+  button.disabled = true
+  button.textContent = busyLabel
+  try {
+    return await work()
+  } finally {
+    button.disabled = false
+    button.textContent = label
+  }
+}
 
 export class DashboardState {
+  private current: Section = 'overview'
+  private pollTimer: number | undefined
+  private initialized = false
+
+  private stops: BusStop[] = []
+  private activeStop = 0
+  private maxStops = 8
+  private stopsDirty = false
+
+  private serviceOrder: string[] = []
+  private draggedIndex = -1
+
+  private display: DisplayConfig | null = null
+  private brightnessTimer: number | undefined
+
   constructor() {
-    this.initTabs()
-    this.initBusArrival()
-    this.initWeather()
-    this.initBusServiceOrdering()
-  }
-
-  private initTabs() {
-    const tabs = document.querySelectorAll('.tab-btn')
-    tabs.forEach((tab) => {
-      tab.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement
-        const tabName = target.dataset.tab as 'settings' | 'bus' | 'weather'
-        this.switchTab(tabName)
-      })
-    })
-  }
-
-  private switchTab(tabName: 'settings' | 'bus' | 'weather') {
-    // Update tab buttons
-    document.querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName)
-    })
-
-    // Update tab content
-    document.querySelectorAll('.tab-content').forEach((content) => {
-      content.classList.toggle(
-        'active',
-        content.getAttribute('data-tab') === tabName,
+    document.querySelectorAll<HTMLButtonElement>('.nav-item').forEach((btn) => {
+      btn.addEventListener('click', () =>
+        this.showSection(btn.dataset.section as Section),
       )
     })
+    window.addEventListener('hashchange', () => this.showFromHash())
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.current === 'overview') this.refreshOverview()
+    })
+
+    this.bindOverview()
+    this.bindStops()
+    this.bindServiceOrder()
+    this.bindDisplay()
+    this.bindWeather()
+    this.bindConnection()
+    this.bindDiagnostics()
   }
 
-  // Settings Tab
+  // Called once the dashboard becomes visible
   async initSettings() {
-    // Load weather regions
-    await this.loadWeatherRegions()
-
-    // Load current settings
-    await this.loadCurrentSettings()
-
-    // WiFi reconfiguration
-    const wifiBtn = document.getElementById('reconfigure-wifi-btn')
-    wifiBtn?.addEventListener('click', () => this.reconfigureWifi())
-
-    // Bus stop configuration
-    const busStopForm = document.getElementById(
-      'bus-stop-form',
-    ) as HTMLFormElement
-    busStopForm?.addEventListener('submit', (e) => {
-      e.preventDefault()
-      this.saveBusStop()
-    })
-
-    // Weather town configuration
-    const weatherTownForm = document.getElementById(
-      'weather-town-form',
-    ) as HTMLFormElement
-    weatherTownForm?.addEventListener('submit', (e) => {
-      e.preventDefault()
-      this.saveWeatherTown()
-    })
-
-    // Weather region configuration
-    const weatherRegionForm = document.getElementById(
-      'weather-region-form',
-    ) as HTMLFormElement
-    weatherRegionForm?.addEventListener('submit', (e) => {
-      e.preventDefault()
-      this.saveWeatherRegion()
-    })
-
-    // LTA API key configuration
-    const apiKeyForm = document.getElementById(
-      'lta-api-form',
-    ) as HTMLFormElement
-    apiKeyForm?.addEventListener('submit', (e) => {
-      e.preventDefault()
-      this.saveLtaApiKey()
-    })
-
-    // Load weather towns
-    const loadTownsBtn = document.getElementById('load-weather-towns-btn')
-    loadTownsBtn?.addEventListener('click', () => this.loadWeatherTowns())
+    if (this.initialized) return
+    this.initialized = true
+    this.showFromHash()
+    this.refreshOverview()
+    await Promise.allSettled([
+      this.loadStops(),
+      this.loadServiceOrder(),
+      this.loadDisplay(),
+      this.loadWeather(),
+      this.loadConnection(),
+    ])
   }
 
-  private async loadCurrentSettings() {
-    try {
-      // Load WiFi
-      const wifiResp = await Api.getConfiguredWifiSsid()
-      const wifiStatus = document.getElementById('current-wifi-status')
-      if (wifiStatus) {
-        wifiStatus.textContent = wifiResp.ssid || 'Not configured'
-      }
+  // ---------------------------------------------------------------------------
+  // Navigation
 
-      // Load bus stop
-      const busStopResp = await Api.getBusStopCode()
-      const busStopInput = document.getElementById(
-        'bus-stop-input',
-      ) as HTMLInputElement
-      if (busStopInput && busStopResp.busStopCode) {
-        busStopInput.value = busStopResp.busStopCode
-      }
+  private showFromHash() {
+    const hash = window.location.hash.replace('#', '') as Section
+    this.showSection(SECTIONS.includes(hash) ? hash : 'overview', false)
+  }
 
-      // Load weather town
-      const townResp = await Api.getWeatherTown()
-      const townInput = document.getElementById(
-        'weather-town-input',
-      ) as HTMLInputElement
-      if (townInput && townResp.town) {
-        townInput.value = townResp.town
-      }
-
-      // Load weather region
-      const regionResp = await Api.getWeatherRegion()
-      const regionSelect = document.getElementById(
-        'weather-region-select',
-      ) as HTMLSelectElement
-      if (regionSelect && regionResp.region) {
-        regionSelect.value = regionResp.region
-      }
-    } catch (error) {
-      console.error('Error loading settings:', error)
+  private showSection(section: Section, updateHash = true) {
+    this.current = section
+    document.querySelectorAll<HTMLElement>('.nav-item').forEach((btn) => {
+      const active = btn.dataset.section === section
+      btn.classList.toggle('active', active)
+      if (active) btn.setAttribute('aria-current', 'page')
+      else btn.removeAttribute('aria-current')
+    })
+    document.querySelectorAll<HTMLElement>('.dash-section').forEach((s) => {
+      s.classList.toggle('active', s.dataset.section === section)
+    })
+    if (updateHash && window.location.hash !== `#${section}`) {
+      history.replaceState(null, '', `#${section}`)
     }
+
+    // Status feeds both the overview and the top bar pill, so keep polling
+    // on every section.
+    if (this.pollTimer === undefined) {
+      this.pollTimer = window.setInterval(
+        () => !document.hidden && this.refreshOverview(),
+        STATUS_POLL_MS,
+      )
+    }
+    if (section === 'overview') this.refreshOverview()
+    if (section === 'diagnostics') this.renderTestStopOptions()
   }
 
-  private async loadWeatherRegions() {
-    try {
-      const resp = await Api.getWeatherRegionList()
-      const select = document.getElementById(
-        'weather-region-select',
-      ) as HTMLSelectElement
-      if (select) {
-        // Clear existing options
-        while (select.firstChild) {
-          select.removeChild(select.firstChild)
+  // ---------------------------------------------------------------------------
+  // Overview
+
+  private bindOverview() {
+    const btn = $<HTMLButtonElement>('refresh-data-btn')
+    btn.addEventListener('click', () =>
+      withBusy(btn, 'Requested', async () => {
+        await Api.refresh()
+        await new Promise((r) => setTimeout(r, 4000))
+        await this.refreshOverview()
+      }).catch(() => undefined),
+    )
+  }
+
+  private async refreshOverview() {
+    const [status, mrt] = await Promise.allSettled([
+      Api.getStatus(),
+      Api.getMrt(),
+    ])
+    if (status.status === 'fulfilled') {
+      this.renderStatus(status.value)
+    } else {
+      this.setPill('error', 'Device unreachable')
+    }
+    if (mrt.status === 'fulfilled') this.renderMrt(mrt.value)
+  }
+
+  private setPill(state: 'ok' | 'warn' | 'error' | 'pending', text: string) {
+    const pill = $('device-pill')
+    pill.dataset.state = state
+    $('device-pill-text').textContent = text
+  }
+
+  private renderStatus(s: StatusRespBody) {
+    $('device-sub').textContent = `${s.wifi.ip || 'busbutler.local'} · v${s.firmware}`
+    const failing = Object.values(s.sources).filter(
+      (src) => src.attempted && !src.ok,
+    ).length
+    if (failing > 0) this.setPill('warn', `${failing} data source${failing > 1 ? 's' : ''} failing`)
+    else this.setPill('ok', 'Online')
+
+    const screen = s.display.idleDimmed
+      ? 'Idle-dimmed'
+      : s.display.nightActive
+        ? 'Night dimming'
+        : 'Normal'
+    const stats: [string, string, string][] = [
+      ['WiFi', s.wifi.ssid || '--', `${signalText(s.wifi.rssi)} · ${s.wifi.rssi} dBm`],
+      ['Address', s.wifi.ip || '--', 'busbutler.local'],
+      ['Uptime', durationText(s.uptime), s.clockSynced ? 'Clock synced' : 'Clock not synced'],
+      ['Screen', `${s.display.level}%`, screen],
+      ['Memory', bytesText(s.freeHeap), `${bytesText(s.freePsram)} PSRAM free`],
+      ['Active stop', s.activeStop || '--', this.stopName(s.activeStop)],
+    ]
+    $('device-stats').replaceChildren(
+      ...stats.map(([label, value, sub]) =>
+        el(
+          'div',
+          { className: 'stat' },
+          el('div', { className: 'stat-label', textContent: label }),
+          el('div', { className: 'stat-value', textContent: value, title: value }),
+          el('div', { className: 'stat-sub', textContent: sub }),
+        ),
+      ),
+    )
+
+    const sources: [string, SourceStatus][] = [
+      ['Bus arrivals', s.sources.bus],
+      ['MRT alerts', s.sources.mrt],
+      ['Forecasts', s.sources.forecast],
+      ['Weather readings', s.sources.readings],
+    ]
+    $('source-list').replaceChildren(
+      ...sources.map(([name, src]) => {
+        let kind = ''
+        let when = 'Waiting'
+        if (src.attempted) {
+          kind = src.ok ? 'ok' : 'error'
+          when = src.ok
+            ? agoText(src.lastSuccessAgo)
+            : src.error === -11
+              ? 'No API key'
+              : src.error === -10
+                ? 'No stop set'
+                : `Failing (last ok ${agoText(src.lastSuccessAgo)})`
         }
+        return el(
+          'li',
+          {},
+          el('span', { className: `dot ${kind}` }),
+          name,
+          el('span', { className: 'when', textContent: when }),
+        )
+      }),
+    )
+  }
 
-        // Add default option
-        const defaultOption = document.createElement('option')
-        defaultOption.value = ''
-        defaultOption.textContent = 'Select region...'
-        select.appendChild(defaultOption)
+  private renderMrt(m: MrtRespBody) {
+    const box = $('mrt-summary')
+    if (m.status === null) {
+      box.replaceChildren(
+        el('p', {
+          className: 'muted',
+          textContent:
+            m.source.error === -11
+              ? 'Add an LTA API key to see MRT alerts.'
+              : 'Waiting for the first check.',
+        }),
+      )
+      return
+    }
+    if (m.status === 'normal') {
+      box.replaceChildren(
+        el('span', { className: 'chip ok', textContent: 'All lines normal' }),
+        el('p', {
+          className: 'hint',
+          textContent: `Checked ${agoText(m.source.lastSuccessAgo)}`,
+        }),
+      )
+      return
+    }
+    const nodes: Node[] = [
+      el('span', { className: 'chip warn', textContent: 'Disruption' }),
+    ]
+    for (const seg of m.segments ?? []) {
+      const bar = el('span', { className: 'mrt-bar' })
+      bar.style.background = LINE_COLORS[seg.line] ?? 'var(--color-text-tertiary)'
+      const stations = seg.stations.split(',').map((x) => x.trim()).filter(Boolean)
+      const range =
+        stations.length > 1 ? `${stations[0]} – ${stations[stations.length - 1]}` : stations[0] ?? ''
+      nodes.push(
+        el(
+          'div',
+          { className: 'mrt-line' },
+          bar,
+          el(
+            'div',
+            {},
+            el('strong', { textContent: seg.lineName }),
+            el('div', {
+              className: 'muted',
+              textContent: [range, seg.direction && seg.direction !== 'Both' ? `towards ${seg.direction}` : '']
+                .filter(Boolean)
+                .join(', '),
+            }),
+          ),
+        ),
+      )
+    }
+    for (const msg of m.messages ?? []) {
+      nodes.push(el('p', { className: 'mrt-msg', textContent: msg }))
+    }
+    box.replaceChildren(...nodes)
+  }
 
-        // Add region options
-        resp.region.forEach((region) => {
-          const option = document.createElement('option')
-          option.value = region
-          option.textContent = region.charAt(0).toUpperCase() + region.slice(1)
-          select.appendChild(option)
+  // ---------------------------------------------------------------------------
+  // Bus stops
+
+  private stopName(code: string) {
+    return this.stops.find((s) => s.code === code)?.name ?? ''
+  }
+
+  private bindStops() {
+    $('add-stop-form').addEventListener('submit', (e) => {
+      e.preventDefault()
+      this.addStop()
+    })
+    $('save-stops-btn').addEventListener('click', () => this.saveStops())
+    window.addEventListener('beforeunload', (e) => {
+      if (this.stopsDirty) e.preventDefault()
+    })
+  }
+
+  private async loadStops() {
+    try {
+      const resp = await Api.getStops()
+      this.stops = resp.stops
+      this.activeStop = resp.active
+      this.maxStops = resp.max
+    } catch {
+      // Older firmware: fall back to the single stop
+      const legacy = await Api.getBusStopCode().catch(() => ({ busStopCode: null }))
+      this.stops = legacy.busStopCode ? [{ code: legacy.busStopCode, name: '' }] : []
+      this.activeStop = 0
+    }
+    this.stopsDirty = false
+    this.renderStops()
+    this.renderTestStopOptions()
+  }
+
+  private markStopsDirty() {
+    this.stopsDirty = true
+    setStatus($('stops-status'), 'Unsaved changes', 'info')
+  }
+
+  private renderStops() {
+    const list = $('stop-list')
+    $('stops-count').textContent = `${this.stops.length} of ${this.maxStops}`
+    $<HTMLInputElement>('add-stop-input').disabled = this.stops.length >= this.maxStops
+
+    if (this.stops.length === 0) {
+      list.replaceChildren(
+        el('li', { className: 'empty', textContent: 'No stops yet. Add one below.' }),
+      )
+      return
+    }
+
+    list.replaceChildren(
+      ...this.stops.map((stop, i) => {
+        const radio = el('input', {
+          type: 'radio',
+          name: 'active-stop',
+          checked: i === this.activeStop,
         })
-      }
-    } catch (error) {
-      console.error('Error loading regions:', error)
-    }
-  }
-
-  private async loadWeatherTowns() {
-    const btn = document.getElementById(
-      'load-weather-towns-btn',
-    ) as HTMLButtonElement
-    const townsList = document.getElementById('weather-towns-list')
-
-    if (!btn || !townsList) return
-
-    btn.disabled = true
-    btn.textContent = 'Loading...'
-
-    // Clear existing content
-    while (townsList.firstChild) {
-      townsList.removeChild(townsList.firstChild)
-    }
-
-    const loadingDiv = document.createElement('div')
-    loadingDiv.className = 'loading-text'
-    loadingDiv.textContent = 'Loading available towns...'
-    townsList.appendChild(loadingDiv)
-
-    try {
-      const resp = await Api.getWeatherTownList()
-
-      // Clear loading message
-      while (townsList.firstChild) {
-        townsList.removeChild(townsList.firstChild)
-      }
-
-      if (resp.towns.length === 0) {
-        const noData = document.createElement('p')
-        noData.className = 'no-data'
-        noData.textContent = 'No towns available'
-        townsList.appendChild(noData)
-      } else {
-        const grid = document.createElement('div')
-        grid.className = 'towns-grid'
-
-        resp.towns.forEach((town) => {
-          const item = document.createElement('div')
-          item.className = 'town-item'
-          item.textContent = town
-          grid.appendChild(item)
+        radio.addEventListener('change', () => {
+          this.activeStop = i
+          this.markStopsDirty()
+          this.renderStops()
         })
 
-        townsList.appendChild(grid)
+        const name = el('input', {
+          className: 'input stop-name',
+          value: stop.name,
+          placeholder: 'Looking up name...',
+          maxLength: 40,
+        })
+        name.setAttribute('aria-label', `Name for stop ${stop.code}`)
+        name.addEventListener('input', () => {
+          stop.name = name.value
+          this.markStopsDirty()
+        })
+
+        const label = el('label', { className: 'stop-radio', title: 'Show this stop first' },
+          radio,
+          el('span', { className: 'stop-code', textContent: stop.code }),
+        )
+
+        const actions = el(
+          'div',
+          { className: 'stop-actions' },
+          iconButton('search', 'Look up name from LTA', () => this.lookupName(stop, true)),
+          iconButton('up', 'Move up', () => this.moveStop(i, -1)),
+          iconButton('down', 'Move down', () => this.moveStop(i, 1)),
+          iconButton('remove', 'Remove stop', () => this.removeStop(i), 'danger'),
+        )
+        ;(actions.children[1] as HTMLButtonElement).disabled = i === 0
+        ;(actions.children[2] as HTMLButtonElement).disabled = i === this.stops.length - 1
+
+        return el('li', { className: `stop-item ${i === this.activeStop ? 'active' : ''}` },
+          label, name, actions)
+      }),
+    )
+  }
+
+  private addStop() {
+    const input = $<HTMLInputElement>('add-stop-input')
+    const status = $('stops-status')
+    const code = input.value.trim()
+    if (!/^\d{5}$/.test(code)) {
+      setStatus(status, 'Bus stop codes are 5 digits, e.g. 17179', 'error')
+      return
+    }
+    if (this.stops.some((s) => s.code === code)) {
+      setStatus(status, `Stop ${code} is already in the list`, 'error')
+      return
+    }
+    const stop = { code, name: '' }
+    this.stops.push(stop)
+    input.value = ''
+    this.markStopsDirty()
+    this.renderStops()
+    this.lookupName(stop, false)
+  }
+
+  private moveStop(index: number, delta: number) {
+    const target = index + delta
+    if (target < 0 || target >= this.stops.length) return
+    const [stop] = this.stops.splice(index, 1)
+    this.stops.splice(target, 0, stop)
+    if (this.activeStop === index) this.activeStop = target
+    else if (this.activeStop === target) this.activeStop = index
+    this.markStopsDirty()
+    this.renderStops()
+  }
+
+  private removeStop(index: number) {
+    this.stops.splice(index, 1)
+    if (this.activeStop >= this.stops.length) this.activeStop = 0
+    else if (index < this.activeStop) this.activeStop--
+    this.markStopsDirty()
+    this.renderStops()
+  }
+
+  // Ask the device to look the name up in LTA's stop list (it pages through
+  // ~5000 stops, so this can take a few seconds).
+  private async lookupName(stop: BusStop, overwrite: boolean) {
+    const status = $('stops-status')
+    setStatus(status, `Looking up ${stop.code}...`, 'info')
+    try {
+      await Api.startStopLookup(stop.code)
+      const started = Date.now()
+      while (Date.now() - started < LOOKUP_TIMEOUT_MS) {
+        await new Promise((r) => setTimeout(r, LOOKUP_POLL_MS))
+        const res = await Api.getStopLookup(stop.code)
+        if (res.status === 'pending') continue
+        if (res.status === 'found' && res.name) {
+          if (overwrite || !stop.name) stop.name = res.name
+          this.markStopsDirty()
+          this.renderStops()
+          setStatus(status, `Found: ${res.name}. Save to keep it.`, 'success')
+        } else if (res.status === 'not_found') {
+          setStatus(status, `Stop ${stop.code} isn't in LTA's list. Check the code.`, 'error')
+        } else {
+          setStatus(status, 'Lookup failed. Check the API key, or type a name.', 'error')
+        }
+        return
       }
-    } catch (error) {
-      // Clear loading message
-      while (townsList.firstChild) {
-        townsList.removeChild(townsList.firstChild)
+      setStatus(status, 'Lookup timed out. You can type a name instead.', 'error')
+    } catch (err: any) {
+      setStatus(status, err.message, 'error')
+    }
+  }
+
+  private async saveStops() {
+    const btn = $<HTMLButtonElement>('save-stops-btn')
+    const status = $('stops-status')
+    await withBusy(btn, 'Saving...', async () => {
+      try {
+        await Api.saveStops(
+          this.stops.map((s) => ({ code: s.code, name: s.name.trim() })),
+          this.activeStop,
+        )
+        this.stopsDirty = false
+        setStatus(status, 'Saved. The device updates within a few seconds.', 'success')
+        this.renderTestStopOptions()
+      } catch (err: any) {
+        setStatus(status, err.message, 'error')
       }
-
-      const errorText = document.createElement('p')
-      errorText.className = 'error-text'
-      errorText.textContent = 'Error loading towns'
-      townsList.appendChild(errorText)
-    } finally {
-      btn.disabled = false
-      btn.textContent = 'Load Available Towns'
-    }
+    })
   }
 
-  private reconfigureWifi() {
-    if (
-      confirm('This will restart the device into WiFi setup mode. Continue?')
-    ) {
-      window.location.reload()
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // Service order
 
-  private async saveBusStop() {
-    const input = document.getElementById('bus-stop-input') as HTMLInputElement
-    const status = document.getElementById('bus-stop-status')
-
-    if (!input || !status) return
-
-    const busStopCode = input.value.trim()
-    if (!busStopCode) {
-      this.showStatus(status, 'Please enter a bus stop code', 'error')
-      return
-    }
-
-    try {
-      await Api.saveBusStopCode(busStopCode)
-      this.showStatus(status, 'Bus stop code saved!', 'success')
-    } catch (error) {
-      this.showStatus(status, 'Error saving bus stop code', 'error')
-    }
-  }
-
-  private async saveWeatherTown() {
-    const input = document.getElementById(
-      'weather-town-input',
-    ) as HTMLInputElement
-    const status = document.getElementById('weather-town-status')
-
-    if (!input || !status) return
-
-    const town = input.value.trim()
-    if (!town) {
-      this.showStatus(status, 'Please enter a town name', 'error')
-      return
-    }
-
-    try {
-      await Api.saveWeatherTown(town)
-      this.showStatus(status, 'Weather town saved!', 'success')
-    } catch (error) {
-      this.showStatus(status, 'Error saving weather town', 'error')
-    }
-  }
-
-  private async saveWeatherRegion() {
-    const select = document.getElementById(
-      'weather-region-select',
-    ) as HTMLSelectElement
-    const status = document.getElementById('weather-region-status')
-
-    if (!select || !status) return
-
-    const region = select.value
-    if (!region) {
-      this.showStatus(status, 'Please select a region', 'error')
-      return
-    }
-
-    try {
-      await Api.saveWeatherRegion(region)
-      this.showStatus(status, 'Weather region saved!', 'success')
-    } catch (error) {
-      this.showStatus(status, 'Error saving weather region', 'error')
-    }
-  }
-
-  private async saveLtaApiKey() {
-    const input = document.getElementById('lta-api-input') as HTMLInputElement
-    const status = document.getElementById('lta-api-status')
-
-    if (!input || !status) return
-
-    const apiKey = input.value.trim()
-    if (!apiKey) {
-      this.showStatus(status, 'Please enter an API key', 'error')
-      return
-    }
-
-    try {
-      await Api.saveLtaApiKey(apiKey)
-      this.showStatus(status, 'API key saved!', 'success')
-      input.value = ''
-    } catch (error) {
-      this.showStatus(status, 'Error saving API key', 'error')
-    }
-  }
-
-  // Bus Service Ordering
-  private serviceOrder: string[] = []
-  private draggedElement: HTMLElement | null = null
-
-  private initBusServiceOrdering() {
-    // Fetch current services button
-    const fetchBtn = document.getElementById('fetch-current-services-btn')
-    fetchBtn?.addEventListener('click', () => this.fetchCurrentServices())
-
-    // Add service manually
-    const addBtn = document.getElementById('add-service-btn')
-    const input = document.getElementById(
-      'manual-service-input',
-    ) as HTMLInputElement
-    addBtn?.addEventListener('click', () => this.addServiceManually())
-    input?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
+  private bindServiceOrder() {
+    $('fetch-current-services-btn').addEventListener('click', () =>
+      this.fetchCurrentServices(),
+    )
+    $('add-service-btn').addEventListener('click', () => this.addServiceManually())
+    $('manual-service-input').addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter') {
         e.preventDefault()
         this.addServiceManually()
       }
     })
-
-    // Save service order button
-    const saveBtn = document.getElementById('save-service-order-btn')
-    saveBtn?.addEventListener('click', () => this.saveServiceOrder())
-
-    // Load existing service order
-    this.loadServiceOrder()
+    $('save-service-order-btn').addEventListener('click', () => this.saveServiceOrder())
   }
 
   private async loadServiceOrder() {
     try {
-      const resp = await Api.getBusServiceOrder()
-      if (resp.order && resp.order.length > 0) {
-        this.serviceOrder = resp.order
-      } else {
-        this.serviceOrder = []
-      }
-      this.renderServiceList()
-    } catch (error) {
-      console.error('Error loading service order:', error)
+      this.serviceOrder = (await Api.getBusServiceOrder()).order
+    } catch {
       this.serviceOrder = []
-      this.renderServiceList()
     }
+    this.renderServiceList()
   }
 
   private async fetchCurrentServices() {
-    const btn = document.getElementById(
-      'fetch-current-services-btn',
-    ) as HTMLButtonElement
-    const status = document.getElementById('service-fetch-status')
-
-    if (!btn || !status) return
-
-    btn.disabled = true
-    btn.textContent = 'Fetching...'
-
-    try {
-      const busStopResp = await Api.getBusStopCode()
-      if (!busStopResp.busStopCode) {
-        throw new Error('Please configure a bus stop first')
-      }
-
-      const data = await Api.testBusArrival(busStopResp.busStopCode)
-
-      // Extract unique service numbers
-      const services = data.services.map((s) => s.service)
-
-      // Merge with existing order, keeping user's order but adding new services
-      const existingSet = new Set(this.serviceOrder)
-      const newServices = services.filter((s) => !existingSet.has(s))
-      this.serviceOrder = [...this.serviceOrder, ...newServices]
-
-      this.renderServiceList()
-      this.showStatus(
-        status,
-        `Loaded ${services.length} services from bus stop`,
-        'success',
-      )
-    } catch (error: any) {
-      this.showStatus(status, error.message || 'Error fetching services', 'error')
-    } finally {
-      btn.disabled = false
-      btn.textContent = 'Fetch Current Services'
+    const btn = $<HTMLButtonElement>('fetch-current-services-btn')
+    const status = $('service-order-status')
+    const stop = this.stops[this.activeStop]
+    if (!stop) {
+      setStatus(status, 'Add a bus stop first', 'error')
+      return
     }
+    await withBusy(btn, 'Fetching...', async () => {
+      try {
+        const data = await Api.testBusArrival(stop.code)
+        const added = data.services
+          .map((s) => s.service)
+          .filter((svc) => !this.serviceOrder.includes(svc))
+        this.serviceOrder.push(...added)
+        this.renderServiceList()
+        setStatus(
+          status,
+          added.length ? `Added ${added.length} service(s). Save to keep.` : 'No new services at this stop',
+          added.length ? 'info' : '',
+        )
+      } catch (err: any) {
+        setStatus(status, err.message, 'error')
+      }
+    })
   }
 
   private addServiceManually() {
-    const input = document.getElementById(
-      'manual-service-input',
-    ) as HTMLInputElement
-    const status = document.getElementById('service-fetch-status')
-
-    if (!input || !status) return
-
-    const serviceNo = input.value.trim().toUpperCase()
-    if (!serviceNo) {
-      this.showStatus(status, 'Please enter a service number', 'error')
+    const input = $<HTMLInputElement>('manual-service-input')
+    const status = $('service-order-status')
+    const svc = input.value.trim()
+    if (!/^[0-9A-Za-z]{1,4}$/.test(svc)) {
+      setStatus(status, 'Services are up to 4 letters or digits, e.g. 174e', 'error')
       return
     }
-
-    if (this.serviceOrder.includes(serviceNo)) {
-      this.showStatus(status, 'Service already in list', 'error')
+    if (this.serviceOrder.includes(svc)) {
+      setStatus(status, `${svc} is already in the list`, 'error')
       return
     }
-
-    this.serviceOrder.push(serviceNo)
-    this.renderServiceList()
+    this.serviceOrder.push(svc)
     input.value = ''
-    this.showStatus(status, `Added service ${serviceNo}`, 'success')
-  }
-
-  private removeService(serviceNo: string) {
-    this.serviceOrder = this.serviceOrder.filter((s) => s !== serviceNo)
     this.renderServiceList()
+    setStatus(status, 'Unsaved changes', 'info')
   }
 
   private renderServiceList() {
-    const container = document.getElementById('service-list')
-    if (!container) return
-
-    // Clear existing content
-    while (container.firstChild) {
-      container.removeChild(container.firstChild)
-    }
-
+    const list = $('service-list')
     if (this.serviceOrder.length === 0) {
-      container.className = 'service-list empty'
-      const emptyMsg = document.createElement('div')
-      emptyMsg.textContent =
-        'No services configured. Fetch current services or add manually.'
-      container.appendChild(emptyMsg)
+      list.replaceChildren(
+        el('div', {
+          className: 'empty',
+          textContent: 'No order set: services show in LTA order.',
+        }),
+      )
       return
     }
-
-    container.className = 'service-list'
-
-    this.serviceOrder.forEach((serviceNo, index) => {
-      const item = this.createServiceItem(serviceNo, index)
-      container.appendChild(item)
-    })
-  }
-
-  private createServiceItem(serviceNo: string, index: number): HTMLElement {
-    const item = document.createElement('div')
-    item.className = 'service-item'
-    item.draggable = true
-    item.dataset.service = serviceNo
-    item.dataset.index = index.toString()
-
-    // Drag handle
-    const handle = document.createElement('div')
-    handle.className = 'service-handle'
-    handle.innerHTML = '<span></span><span></span><span></span>'
-    item.appendChild(handle)
-
-    // Service number
-    const number = document.createElement('div')
-    number.className = 'service-number'
-    number.textContent = serviceNo
-    item.appendChild(number)
-
-    // Remove button
-    const removeBtn = document.createElement('button')
-    removeBtn.className = 'service-remove'
-    removeBtn.textContent = 'Remove'
-    removeBtn.onclick = (e) => {
-      e.stopPropagation()
-      this.removeService(serviceNo)
-    }
-    item.appendChild(removeBtn)
-
-    // Drag event handlers
-    item.addEventListener('dragstart', (e) => this.handleDragStart(e))
-    item.addEventListener('dragend', (e) => this.handleDragEnd(e))
-    item.addEventListener('dragover', (e) => this.handleDragOver(e))
-    item.addEventListener('drop', (e) => this.handleDrop(e))
-    item.addEventListener('dragenter', (e) => this.handleDragEnter(e))
-    item.addEventListener('dragleave', (e) => this.handleDragLeave(e))
-
-    return item
-  }
-
-  private handleDragStart(e: DragEvent) {
-    const target = e.currentTarget as HTMLElement
-    this.draggedElement = target
-    target.classList.add('dragging')
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move'
-      e.dataTransfer.setData('text/html', target.innerHTML)
-    }
-  }
-
-  private handleDragEnd(e: DragEvent) {
-    const target = e.currentTarget as HTMLElement
-    target.classList.remove('dragging')
-    this.draggedElement = null
-
-    // Remove all drag-over classes
-    document
-      .querySelectorAll('.service-item')
-      .forEach((item) => item.classList.remove('drag-over'))
-  }
-
-  private handleDragOver(e: DragEvent) {
-    e.preventDefault()
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'move'
-    }
-    return false
-  }
-
-  private handleDragEnter(e: DragEvent) {
-    const target = e.currentTarget as HTMLElement
-    if (target !== this.draggedElement) {
-      target.classList.add('drag-over')
-    }
-  }
-
-  private handleDragLeave(e: DragEvent) {
-    const target = e.currentTarget as HTMLElement
-    target.classList.remove('drag-over')
-  }
-
-  private handleDrop(e: DragEvent) {
-    e.stopPropagation()
-    e.preventDefault()
-
-    const target = e.currentTarget as HTMLElement
-    target.classList.remove('drag-over')
-
-    if (!this.draggedElement || this.draggedElement === target) {
-      return false
-    }
-
-    const draggedIndex = parseInt(this.draggedElement.dataset.index || '0')
-    const targetIndex = parseInt(target.dataset.index || '0')
-
-    // Reorder the array
-    const newOrder = [...this.serviceOrder]
-    const [removed] = newOrder.splice(draggedIndex, 1)
-    newOrder.splice(targetIndex, 0, removed)
-
-    this.serviceOrder = newOrder
-    this.renderServiceList()
-
-    return false
+    list.replaceChildren(
+      ...this.serviceOrder.map((svc, i) => {
+        const item = el(
+          'div',
+          { className: 'service-item', draggable: true },
+          el('span', { className: 'service-index', textContent: String(i + 1) }),
+          el('span', { className: 'service-number', textContent: svc }),
+          iconButton('remove', `Remove ${svc}`, () => {
+            this.serviceOrder.splice(i, 1)
+            this.renderServiceList()
+            setStatus($('service-order-status'), 'Unsaved changes', 'info')
+          }, 'danger'),
+        )
+        item.addEventListener('dragstart', (e) => {
+          this.draggedIndex = i
+          item.classList.add('dragging')
+          e.dataTransfer?.setData('text/plain', svc)
+        })
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging')
+          list.querySelectorAll('.drag-over').forEach((n) => n.classList.remove('drag-over'))
+        })
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault()
+          item.classList.add('drag-over')
+        })
+        item.addEventListener('dragleave', () => item.classList.remove('drag-over'))
+        item.addEventListener('drop', (e) => {
+          e.preventDefault()
+          if (this.draggedIndex < 0 || this.draggedIndex === i) return
+          const [moved] = this.serviceOrder.splice(this.draggedIndex, 1)
+          this.serviceOrder.splice(i, 0, moved)
+          this.draggedIndex = -1
+          this.renderServiceList()
+          setStatus($('service-order-status'), 'Unsaved changes', 'info')
+        })
+        return item
+      }),
+    )
   }
 
   private async saveServiceOrder() {
-    const btn = document.getElementById(
-      'save-service-order-btn',
-    ) as HTMLButtonElement
-    const status = document.getElementById('service-order-status')
+    const btn = $<HTMLButtonElement>('save-service-order-btn')
+    const status = $('service-order-status')
+    await withBusy(btn, 'Saving...', async () => {
+      try {
+        await Api.saveBusServiceOrder(this.serviceOrder)
+        setStatus(status, 'Saved', 'success')
+      } catch (err: any) {
+        setStatus(status, err.message, 'error')
+      }
+    })
+  }
 
-    if (!btn || !status) return
+  // ---------------------------------------------------------------------------
+  // Display
 
-    btn.disabled = true
-    btn.textContent = 'Saving...'
+  private bindDisplay() {
+    const brightness = $<HTMLInputElement>('brightness-input')
+    brightness.addEventListener('input', () => {
+      $('brightness-value').textContent = `${brightness.value}%`
+      // Apply live, but don't flood the device with requests
+      window.clearTimeout(this.brightnessTimer)
+      this.brightnessTimer = window.setTimeout(() => {
+        Api.saveDisplay({ brightness: Number(brightness.value) }).catch(() => undefined)
+      }, 250)
+    })
 
+    for (const id of ['idle-level', 'night-level']) {
+      const range = $<HTMLInputElement>(id)
+      range.addEventListener('input', () => {
+        $(`${id}-value`).textContent = `${range.value}%`
+      })
+    }
+    for (const id of ['idle-enabled', 'night-enabled', 'night-theme']) {
+      $(id).addEventListener('change', () => this.updateDependents())
+    }
+
+    $('display-form').addEventListener('submit', (e) => {
+      e.preventDefault()
+      this.saveDisplay()
+    })
+  }
+
+  private updateDependents() {
+    document.querySelectorAll<HTMLElement>('[data-depends]').forEach((grid) => {
+      const on = $<HTMLInputElement>(grid.dataset.depends!).checked
+      grid.classList.toggle('is-off', !on)
+    })
+    // The time window matters if either night feature is on
+    const nightOn =
+      $<HTMLInputElement>('night-enabled').checked ||
+      $<HTMLInputElement>('night-theme').checked
+    $('night-window').classList.toggle('is-off', !nightOn)
+  }
+
+  private async loadDisplay() {
     try {
-      await Api.saveBusServiceOrder(this.serviceOrder)
-      this.showStatus(status, 'Service order saved!', 'success')
-    } catch (error) {
-      this.showStatus(status, 'Error saving service order', 'error')
-    } finally {
-      btn.disabled = false
-      btn.textContent = 'Save Service Order'
+      this.display = await Api.getDisplay()
+    } catch {
+      return
+    }
+    const d = this.display
+    $<HTMLInputElement>('brightness-input').value = String(d.brightness)
+    $('brightness-value').textContent = `${d.brightness}%`
+    $<HTMLInputElement>('idle-enabled').checked = d.idleDimEnabled
+    $<HTMLInputElement>('idle-minutes').value = String(d.idleDimMinutes)
+    $<HTMLInputElement>('idle-level').value = String(d.idleDimLevel)
+    $('idle-level-value').textContent = `${d.idleDimLevel}%`
+    $<HTMLInputElement>('night-enabled').checked = d.nightEnabled
+    $<HTMLInputElement>('night-theme').checked = d.nightTheme ?? false
+    $<HTMLInputElement>('night-start').value = d.nightStart
+    $<HTMLInputElement>('night-end').value = d.nightEnd
+    $<HTMLInputElement>('night-level').value = String(d.nightLevel)
+    $('night-level-value').textContent = `${d.nightLevel}%`
+    this.updateDependents()
+  }
+
+  private async saveDisplay() {
+    const status = $('display-status')
+    const minutes = Number($<HTMLInputElement>('idle-minutes').value)
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 120) {
+      setStatus(status, 'Dim after must be 1 to 120 minutes', 'error')
+      return
+    }
+    const start = $<HTMLInputElement>('night-start').value
+    const end = $<HTMLInputElement>('night-end').value
+    if (!start || !end) {
+      setStatus(status, 'Set both night times', 'error')
+      return
+    }
+    if (start === end) {
+      setStatus(status, 'Night start and end must be different', 'error')
+      return
+    }
+    try {
+      await Api.saveDisplay({
+        idleDimEnabled: $<HTMLInputElement>('idle-enabled').checked,
+        idleDimMinutes: minutes,
+        idleDimLevel: Number($<HTMLInputElement>('idle-level').value),
+        nightEnabled: $<HTMLInputElement>('night-enabled').checked,
+        nightTheme: $<HTMLInputElement>('night-theme').checked,
+        nightStart: start,
+        nightEnd: end,
+        nightLevel: Number($<HTMLInputElement>('night-level').value),
+      })
+      setStatus(status, 'Saved', 'success')
+    } catch (err: any) {
+      setStatus(status, err.message, 'error')
     }
   }
 
-  // Bus Arrival Tab
-  private initBusArrival() {
-    const fetchBtn = document.getElementById('fetch-bus-btn')
-    fetchBtn?.addEventListener('click', () => this.fetchBusArrivals())
+  // ---------------------------------------------------------------------------
+  // Weather
+
+  private bindWeather() {
+    $('weather-form').addEventListener('submit', (e) => {
+      e.preventDefault()
+      this.saveWeather()
+    })
+  }
+
+  private async loadWeather() {
+    const select = $<HTMLSelectElement>('weather-region-select')
+    const [regions, region, town] = await Promise.allSettled([
+      Api.getWeatherRegionList(),
+      Api.getWeatherRegion(),
+      Api.getWeatherTown(),
+    ])
+    const list =
+      regions.status === 'fulfilled'
+        ? regions.value.region
+        : ['central', 'north', 'south', 'east', 'west']
+    select.replaceChildren(
+      ...list.map((r) =>
+        el('option', { value: r, textContent: r.charAt(0).toUpperCase() + r.slice(1) }),
+      ),
+    )
+    if (region.status === 'fulfilled' && region.value.region) {
+      select.value = region.value.region
+    }
+    if (town.status === 'fulfilled' && town.value.town) {
+      $<HTMLInputElement>('weather-town-input').value = town.value.town
+    }
+
+    // Town suggestions come from the live 2-hour forecast (slow-ish)
+    Api.getWeatherTownList()
+      .then((resp) => {
+        $('weather-town-options').replaceChildren(
+          ...resp.towns.map((t) => el('option', { value: t })),
+        )
+      })
+      .catch(() => undefined)
+  }
+
+  private async saveWeather() {
+    const status = $('weather-status')
+    const town = $<HTMLInputElement>('weather-town-input').value.trim()
+    const region = $<HTMLSelectElement>('weather-region-select').value
+    const towns = Array.from(
+      $('weather-town-options').querySelectorAll('option'),
+    ).map((o) => (o as HTMLOptionElement).value)
+    try {
+      await Promise.all([Api.saveWeatherTown(town), Api.saveWeatherRegion(region)])
+      if (towns.length && !towns.some((t) => t.toLowerCase() === town.toLowerCase())) {
+        setStatus(status, `Saved, but "${town}" isn't an NEA forecast area. Pick one from the list.`, 'error')
+      } else {
+        setStatus(status, 'Saved', 'success')
+      }
+    } catch (err: any) {
+      setStatus(status, err.message, 'error')
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Connection
+
+  private bindConnection() {
+    $('wifi-scan-btn').addEventListener('click', () => this.scanWifi())
+    $('wifi-change').addEventListener('toggle', (e) => {
+      if ((e.target as HTMLDetailsElement).open) this.scanWifi()
+    })
+    $('wifi-save-btn').addEventListener('click', () => this.saveWifi())
+    $('lta-api-form').addEventListener('submit', (e) => {
+      e.preventDefault()
+      this.saveLtaApiKey()
+    })
+  }
+
+  private async loadConnection() {
+    const [wifi, key] = await Promise.allSettled([
+      Api.getConfiguredWifiSsid(),
+      Api.getSavedLtaApiKey(),
+    ])
+    const wifiChip = $('current-wifi-status')
+    if (wifi.status === 'fulfilled' && wifi.value.ssid) {
+      wifiChip.textContent = wifi.value.ssid
+      wifiChip.className = 'chip ok'
+    } else {
+      wifiChip.textContent = 'Not configured'
+      wifiChip.className = 'chip warn'
+    }
+    const keyChip = $('lta-api-chip')
+    const saved = key.status === 'fulfilled' && key.value.isApiKeySaved
+    keyChip.textContent = saved ? 'Key saved' : 'No key'
+    keyChip.className = saved ? 'chip ok' : 'chip error'
+  }
+
+  private async scanWifi() {
+    const btn = $<HTMLButtonElement>('wifi-scan-btn')
+    const select = $<HTMLSelectElement>('wifi-ssid-select')
+    const status = $('wifi-status')
+    await withBusy(btn, 'Scanning...', async () => {
+      try {
+        const resp = await Api.scanWifiNetworks()
+        const seen = new Set<string>()
+        const networks = resp.networks
+          .filter((n) => n.ssid && !seen.has(n.ssid) && seen.add(n.ssid))
+          .sort((a, b) => b.rssi - a.rssi)
+        select.replaceChildren(
+          ...networks.map((n) =>
+            el('option', {
+              value: n.ssid,
+              textContent: `${n.ssid}  (${signalText(n.rssi)}${n.security === 'open' ? ', open' : ''})`,
+            }),
+          ),
+        )
+        setStatus(status, networks.length ? '' : 'No networks found', networks.length ? '' : 'error')
+      } catch (err: any) {
+        setStatus(status, err.message, 'error')
+      }
+    })
+  }
+
+  private async saveWifi() {
+    const ssid = $<HTMLSelectElement>('wifi-ssid-select').value
+    const passphrase = $<HTMLInputElement>('wifi-passphrase-input').value
+    const status = $('wifi-status')
+    if (!ssid) {
+      setStatus(status, 'Pick a network first', 'error')
+      return
+    }
+    if (
+      !confirm(
+        `Switch the device to "${ssid}" and restart it? If the password is wrong, the device starts its setup hotspot so you can fix it.`,
+      )
+    ) {
+      return
+    }
+    try {
+      await Api.saveWifiNetwork(ssid, passphrase)
+      await Api.restart()
+      setStatus(status, 'Restarting. Reconnect your phone to the same network, then reload this page.', 'success')
+    } catch (err: any) {
+      setStatus(status, err.message, 'error')
+    }
+  }
+
+  private async saveLtaApiKey() {
+    const input = $<HTMLInputElement>('lta-api-input')
+    const status = $('lta-api-status')
+    const apiKey = input.value.trim()
+    if (!apiKey) {
+      setStatus(status, 'Paste a key first', 'error')
+      return
+    }
+    try {
+      await Api.saveLtaApiKey(apiKey)
+      input.value = ''
+      setStatus(status, 'Key updated. The device uses it from the next request.', 'success')
+      this.loadConnection()
+    } catch (err: any) {
+      setStatus(status, err.message, 'error')
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Diagnostics
+
+  private bindDiagnostics() {
+    $('fetch-bus-btn').addEventListener('click', () => this.fetchBusArrivals())
+    $('fetch-weather-btn').addEventListener('click', () => this.fetchWeather())
+    $('restart-btn').addEventListener('click', async () => {
+      if (!confirm('Restart the device now?')) return
+      await Api.restart().catch(() => undefined)
+      this.setPill('pending', 'Restarting...')
+    })
+  }
+
+  private renderTestStopOptions() {
+    const select = $<HTMLSelectElement>('test-stop-select')
+    const previous = select.value
+    select.replaceChildren(
+      ...this.stops.map((s) =>
+        el('option', { value: s.code, textContent: s.name ? `${s.code} · ${s.name}` : s.code }),
+      ),
+    )
+    if (previous) select.value = previous
+    else if (this.stops[this.activeStop]) select.value = this.stops[this.activeStop].code
   }
 
   private async fetchBusArrivals() {
-    const btn = document.getElementById('fetch-bus-btn') as HTMLButtonElement
-    const results = document.getElementById('bus-results')
-
-    if (!btn || !results) return
-
-    btn.disabled = true
-    btn.textContent = 'Fetching...'
-
-    // Clear existing content
-    while (results.firstChild) {
-      results.removeChild(results.firstChild)
-    }
-
-    const loadingDiv = document.createElement('div')
-    loadingDiv.className = 'loading-text'
-    loadingDiv.textContent = 'Loading bus arrival data...'
-    results.appendChild(loadingDiv)
-
-    try {
-      const busStopResp = await Api.getBusStopCode()
-      if (!busStopResp.busStopCode) {
-        throw new Error('No bus stop configured')
-      }
-
-      const data = await Api.testBusArrival(busStopResp.busStopCode)
-
-      // Clear loading message
-      while (results.firstChild) {
-        results.removeChild(results.firstChild)
-      }
-
-      this.displayBusArrivals(results, data)
-    } catch (error: any) {
-      // Clear loading message
-      while (results.firstChild) {
-        results.removeChild(results.firstChild)
-      }
-
-      this.displayError(results, error.message || 'Error fetching bus arrivals')
-    } finally {
-      btn.disabled = false
-      btn.textContent = 'Fetch Bus Arrivals'
-    }
-  }
-
-  private displayBusArrivals(container: HTMLElement, data: BusArrivalRespBody) {
-    if (data.services.length === 0) {
-      const noData = document.createElement('p')
-      noData.className = 'no-data'
-      noData.textContent = 'No buses currently arriving at this stop'
-      container.appendChild(noData)
+    const btn = $<HTMLButtonElement>('fetch-bus-btn')
+    const results = $('bus-results')
+    const code = $<HTMLSelectElement>('test-stop-select').value
+    if (!code) {
+      results.replaceChildren(el('div', { className: 'empty', textContent: 'Add a bus stop first.' }))
       return
     }
-
-    // Header
-    const header = document.createElement('div')
-    header.className = 'bus-results-header'
-    const headerTitle = document.createElement('h3')
-    headerTitle.textContent = `Bus Stop: ${data.busStop}`
-    header.appendChild(headerTitle)
-    container.appendChild(header)
-
-    // Services
-    data.services.forEach((service) => {
-      const card = this.createBusServiceCard(service)
-      container.appendChild(card)
+    await withBusy(btn, 'Fetching...', async () => {
+      try {
+        const data = await Api.testBusArrival(code)
+        if (data.services.length === 0) {
+          results.replaceChildren(el('div', { className: 'empty', textContent: 'No buses at this stop right now.' }))
+          return
+        }
+        const loadClass = (load: string) =>
+          /limited/i.test(load) ? 'load-LSD' : /standing/i.test(load) ? 'load-SDA' : 'load-SEA'
+        const cell = (a?: BusArrival) => {
+          if (!a) return el('td', { className: 'muted', textContent: '--' })
+          const mins = Math.max(0, Math.floor(a.secondsLeft / 60))
+          const td = el('td', {},
+            el('span', {
+              className: `mins ${loadClass(a.busLoad)}`,
+              textContent: mins === 0 ? 'Arr' : `${mins} min`,
+            }),
+          )
+          td.title = `${a.busType}, ${a.busLoad}${a.isWAB ? ', wheelchair accessible' : ''}`
+          return td
+        }
+        const table = el('table', { className: 'arrival-table' },
+          el('thead', {}, el('tr', {},
+            el('th', { textContent: 'Service' }),
+            el('th', { textContent: 'Next' }),
+            el('th', { textContent: 'Then' }),
+            el('th', { textContent: 'After' }),
+            el('th', { textContent: 'Operator' }),
+          )),
+          el('tbody', {}, ...data.services.map((s) =>
+            el('tr', {},
+              el('td', { className: 'svc', textContent: s.service }),
+              cell(s.nextBus1), cell(s.nextBus2), cell(s.nextBus3),
+              el('td', { className: 'muted', textContent: s.company }),
+            ),
+          )),
+        )
+        results.replaceChildren(
+          el('p', { className: 'hint', textContent: 'Colour shows crowding: green seats, yellow standing, red limited standing.' }),
+          el('div', { className: 'table-wrap' }, table),
+        )
+      } catch (err: any) {
+        results.replaceChildren(el('div', { className: 'status-message error', textContent: err.message }))
+      }
     })
-  }
-
-  private createBusServiceCard(service: BusService): HTMLElement {
-    const card = document.createElement('div')
-    card.className = 'bus-service-card'
-
-    // Header
-    const header = document.createElement('div')
-    header.className = 'bus-service-header'
-
-    const busNumber = document.createElement('div')
-    busNumber.className = 'bus-number'
-    busNumber.textContent = service.service
-    header.appendChild(busNumber)
-
-    const busCompany = document.createElement('div')
-    busCompany.className = 'bus-company'
-    busCompany.textContent = service.company
-    header.appendChild(busCompany)
-
-    card.appendChild(header)
-
-    // Arrivals
-    const arrivals = document.createElement('div')
-    arrivals.className = 'bus-arrivals'
-
-    if (service.nextBus1) {
-      arrivals.appendChild(this.createBusArrivalItem('Next', service.nextBus1))
-    }
-    if (service.nextBus2) {
-      arrivals.appendChild(
-        this.createBusArrivalItem('Following', service.nextBus2),
-      )
-    }
-    if (service.nextBus3) {
-      arrivals.appendChild(
-        this.createBusArrivalItem('Subsequent', service.nextBus3),
-      )
-    }
-
-    card.appendChild(arrivals)
-    return card
-  }
-
-  private createBusArrivalItem(label: string, arrival: any): HTMLElement {
-    const item = document.createElement('div')
-    item.className = 'bus-arrival-item'
-
-    // Label
-    const arrivalLabel = document.createElement('div')
-    arrivalLabel.className = 'arrival-label'
-    arrivalLabel.textContent = label
-    item.appendChild(arrivalLabel)
-
-    // Time
-    const minutes = Math.floor(arrival.secondsLeft / 60)
-    const timeText = minutes <= 0 ? 'Arriving' : `${minutes} min`
-
-    const arrivalTime = document.createElement('div')
-    arrivalTime.className = 'arrival-time'
-    arrivalTime.textContent = timeText
-    item.appendChild(arrivalTime)
-
-    // Details
-    const details = document.createElement('div')
-    details.className = 'arrival-details'
-
-    const busType = document.createElement('span')
-    busType.className = 'bus-type'
-    busType.textContent = arrival.busType
-    details.appendChild(busType)
-
-    const busLoad = document.createElement('span')
-    busLoad.className = `bus-load load-${arrival.busLoad
-      .toLowerCase()
-      .replace(/\s+/g, '-')}`
-    busLoad.textContent = arrival.busLoad
-    details.appendChild(busLoad)
-
-    if (arrival.isWAB) {
-      const wabBadge = document.createElement('span')
-      wabBadge.className = 'wab-badge'
-      wabBadge.textContent = 'WAB'
-      details.appendChild(wabBadge)
-    }
-
-    item.appendChild(details)
-    return item
-  }
-
-  // Weather Tab
-  private initWeather() {
-    const fetchBtn = document.getElementById('fetch-weather-btn')
-    fetchBtn?.addEventListener('click', () => this.fetchWeather())
   }
 
   private async fetchWeather() {
-    const btn = document.getElementById(
-      'fetch-weather-btn',
-    ) as HTMLButtonElement
-    const results = document.getElementById('weather-results')
-
-    if (!btn || !results) return
-
-    btn.disabled = true
-    btn.textContent = 'Fetching...'
-
-    // Clear existing content
-    while (results.firstChild) {
-      results.removeChild(results.firstChild)
-    }
-
-    const loadingDiv = document.createElement('div')
-    loadingDiv.className = 'loading-text'
-    loadingDiv.textContent = 'Loading weather data...'
-    results.appendChild(loadingDiv)
-
-    try {
-      const data = await Api.testWeather()
-
-      // Clear loading message
-      while (results.firstChild) {
-        results.removeChild(results.firstChild)
+    const btn = $<HTMLButtonElement>('fetch-weather-btn')
+    const results = $('weather-results')
+    await withBusy(btn, 'Fetching...', async () => {
+      try {
+        const data: WeatherRespBody = await Api.testWeather()
+        const dl = el('dl', { className: 'kv' },
+          el('dt', { textContent: 'Town' }), el('dd', { textContent: data.town || '--' }),
+          el('dt', { textContent: 'Next 2 hours' }), el('dd', { textContent: data.twoHourForecast?.forecast || '--' }),
+          el('dt', { textContent: 'Region' }), el('dd', { textContent: data.region || '--' }),
+          ...(data.twentyFourHourForecast?.periods ?? []).flatMap((p) => [
+            el('dt', { textContent: p.timePeriod }),
+            el('dd', { textContent: p.forecast }),
+          ]),
+        )
+        results.replaceChildren(dl)
+      } catch (err: any) {
+        results.replaceChildren(el('div', { className: 'status-message error', textContent: err.message }))
       }
-
-      this.displayWeather(results, data)
-    } catch (error: any) {
-      // Clear loading message
-      while (results.firstChild) {
-        results.removeChild(results.firstChild)
-      }
-
-      this.displayError(results, error.message || 'Error fetching weather data')
-    } finally {
-      btn.disabled = false
-      btn.textContent = 'Fetch Weather'
-    }
-  }
-
-  private displayWeather(container: HTMLElement, data: WeatherRespBody) {
-    const card = document.createElement('div')
-    card.className = 'weather-card'
-
-    // Header
-    const header = document.createElement('div')
-    header.className = 'weather-header'
-
-    const title = document.createElement('h3')
-    title.textContent = data.town
-    header.appendChild(title)
-
-    const regionBadge = document.createElement('span')
-    regionBadge.className = 'region-badge'
-    regionBadge.textContent = data.region
-    header.appendChild(regionBadge)
-
-    card.appendChild(header)
-
-    // 2-hour forecast section
-    const twoHourSection = document.createElement('div')
-    twoHourSection.className = 'weather-section'
-
-    const twoHourTitle = document.createElement('h4')
-    twoHourTitle.textContent = '2-Hour Forecast'
-    twoHourSection.appendChild(twoHourTitle)
-
-    const forecastItem = document.createElement('div')
-    forecastItem.className = 'forecast-item'
-
-    const forecastIcon = document.createElement('div')
-    forecastIcon.className = 'forecast-icon'
-    forecastIcon.textContent = this.getWeatherIcon(
-      data.twoHourForecast.forecast,
-    )
-    forecastItem.appendChild(forecastIcon)
-
-    const forecastText = document.createElement('div')
-    forecastText.className = 'forecast-text'
-    forecastText.textContent = data.twoHourForecast.forecast
-    forecastItem.appendChild(forecastText)
-
-    twoHourSection.appendChild(forecastItem)
-    card.appendChild(twoHourSection)
-
-    // 24-hour forecast section
-    const twentyFourSection = document.createElement('div')
-    twentyFourSection.className = 'weather-section'
-
-    const twentyFourTitle = document.createElement('h4')
-    twentyFourTitle.textContent = '24-Hour Forecast'
-    twentyFourSection.appendChild(twentyFourTitle)
-
-    const periods = document.createElement('div')
-    periods.className = 'forecast-periods'
-
-    data.twentyFourHourForecast.periods.forEach((period) => {
-      const periodItem = document.createElement('div')
-      periodItem.className = 'period-item'
-
-      const periodTime = document.createElement('div')
-      periodTime.className = 'period-time'
-      periodTime.textContent = period.timePeriod
-      periodItem.appendChild(periodTime)
-
-      const periodForecast = document.createElement('div')
-      periodForecast.className = 'period-forecast'
-
-      const periodIcon = document.createElement('span')
-      periodIcon.className = 'forecast-icon-small'
-      periodIcon.textContent = this.getWeatherIcon(period.forecast)
-      periodForecast.appendChild(periodIcon)
-
-      periodForecast.appendChild(document.createTextNode(period.forecast))
-      periodItem.appendChild(periodForecast)
-
-      periods.appendChild(periodItem)
     })
-
-    twentyFourSection.appendChild(periods)
-    card.appendChild(twentyFourSection)
-
-    container.appendChild(card)
-  }
-
-  private displayError(container: HTMLElement, message: string) {
-    const errorCard = document.createElement('div')
-    errorCard.className = 'error-card'
-
-    // SVG Icon
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('width', '24')
-    svg.setAttribute('height', '24')
-    svg.setAttribute('viewBox', '0 0 24 24')
-    svg.setAttribute('fill', 'none')
-    svg.setAttribute('stroke', 'currentColor')
-    svg.setAttribute('stroke-width', '2')
-
-    const circle = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'circle',
-    )
-    circle.setAttribute('cx', '12')
-    circle.setAttribute('cy', '12')
-    circle.setAttribute('r', '10')
-    svg.appendChild(circle)
-
-    const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-    line1.setAttribute('x1', '12')
-    line1.setAttribute('y1', '8')
-    line1.setAttribute('x2', '12')
-    line1.setAttribute('y2', '12')
-    svg.appendChild(line1)
-
-    const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-    line2.setAttribute('x1', '12')
-    line2.setAttribute('y1', '16')
-    line2.setAttribute('x2', '12.01')
-    line2.setAttribute('y2', '16')
-    svg.appendChild(line2)
-
-    errorCard.appendChild(svg)
-
-    const errorMessage = document.createElement('p')
-    errorMessage.textContent = message
-    errorCard.appendChild(errorMessage)
-
-    container.appendChild(errorCard)
-  }
-
-  private getWeatherIcon(forecast: string): string {
-    const lower = forecast.toLowerCase()
-    if (lower.includes('thunder') || lower.includes('storm')) return '⛈️'
-    if (lower.includes('rain') || lower.includes('shower')) return '🌧️'
-    if (lower.includes('cloudy')) return '☁️'
-    if (lower.includes('partly')) return '⛅'
-    if (lower.includes('fair') || lower.includes('sunny')) return '☀️'
-    return '🌤️'
-  }
-
-  private showStatus(
-    element: HTMLElement,
-    message: string,
-    type: 'success' | 'error',
-  ) {
-    element.textContent = message
-    element.className = `status-message status-${type}`
-    setTimeout(() => {
-      element.textContent = ''
-      element.className = 'status-message'
-    }, 3000)
   }
 }

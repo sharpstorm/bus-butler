@@ -12,14 +12,18 @@ IAppState* AppStateStore::getStateRefById(AppState state) {
       return &bootState;
     case AppState::Setup:
       return &setupState;
-    case AppState::Homescreen:
-      return &homescreenState;
-    case AppState::Settings:
-      return &settingsState;
-    case AppState::WeatherForecast:
-      return &weatherForecastState;
-    case AppState::ShowBusStopQr:
-      return &showBusStopQrState;
+    case AppState::Home:
+      return &homeState;
+    case AppState::WeatherPage:
+      return &weatherPageState;
+    case AppState::MrtPage:
+      return &mrtPageState;
+    case AppState::StatusPage:
+      return &statusPageState;
+    case AppState::StopQr:
+      return &stopQrState;
+    case AppState::Controls:
+      return &controlsState;
     default:
       return nullptr;
   }

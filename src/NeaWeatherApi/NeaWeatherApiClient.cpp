@@ -128,6 +128,18 @@ unique_ptr<TwoHourForecastResponse> NeaWeatherClient::getTwoHourForecast() {
     }
   }
 
+  // Town coordinates, used to pick the nearest weather station
+  for (JsonObject meta : data["area_metadata"].as<JsonArray>()) {
+    String name = meta["name"] | "";
+    for (auto& area : resp->forecasts) {
+      if (area.area == name) {
+        area.latitude = meta["label_location"]["latitude"] | 0.0f;
+        area.longitude = meta["label_location"]["longitude"] | 0.0f;
+        break;
+      }
+    }
+  }
+
   Serial.printf("Parsed %d area forecasts\n", resp->forecasts.size());
   return resp;
 }
@@ -211,6 +223,7 @@ NeaWeatherClient::getTwentyFourHourForecast() {
 
       PeriodForecast pf = parsePeriodForecast(periodObj);
       pf.timePeriod = timePeriod;
+      resp->periods.push_back(pf);
 
       if (timePeriod.indexOf(MIDNIGHT_STRING) >= 0) {
         resp->midnight = pf;
@@ -265,6 +278,113 @@ WeatherCondition NeaWeatherClient::getForecastForArea(
   }
 
   return WeatherCondition::Unknown;
+}
+
+unique_ptr<FourDayOutlookResponse> NeaWeatherClient::getFourDayOutlook() {
+  unique_ptr<JsonDocument> doc = performRequest(FOUR_DAY_OUTLOOK_PATH);
+  if (doc == nullptr) {
+    return nullptr;
+  }
+
+  JsonObject record = (*doc)["data"]["records"][0].as<JsonObject>();
+  if (record.isNull()) {
+    return nullptr;
+  }
+
+  unique_ptr<FourDayOutlookResponse> resp = make_unique<FourDayOutlookResponse>();
+  resp->updateTimestamp = record["updatedTimestamp"] | "";
+  for (JsonObject f : record["forecasts"].as<JsonArray>()) {
+    DayOutlook day;
+    day.day = f["day"] | "";
+    day.condition = parseWeatherCondition(f["forecast"]["text"] | "");
+    day.summary = f["forecast"]["summary"] | "";
+    day.temperature = {f["temperature"]["low"] | 0, f["temperature"]["high"] | 0};
+    day.humidity = {f["relativeHumidity"]["low"] | 0,
+                    f["relativeHumidity"]["high"] | 0};
+    day.windDirection = f["wind"]["direction"] | "";
+    day.windSpeed = {f["wind"]["speed"]["low"] | 0, f["wind"]["speed"]["high"] | 0};
+    resp->days.push_back(day);
+  }
+  return resp;
+}
+
+unique_ptr<StationReadingsResponse> NeaWeatherClient::getStationReadings(
+    const char* path) {
+  unique_ptr<JsonDocument> doc = performRequest(path);
+  if (doc == nullptr) {
+    return nullptr;
+  }
+
+  JsonObject data = (*doc)["data"].as<JsonObject>();
+  if (data.isNull()) {
+    return nullptr;
+  }
+
+  unique_ptr<StationReadingsResponse> resp =
+      make_unique<StationReadingsResponse>();
+  resp->unit = data["readingUnit"] | "";
+  for (JsonObject st : data["stations"].as<JsonArray>()) {
+    StationReading reading;
+    reading.id = st["id"] | "";
+    reading.name = st["name"] | "";
+    reading.latitude = st["location"]["latitude"] | 0.0f;
+    reading.longitude = st["location"]["longitude"] | 0.0f;
+    resp->stations.push_back(reading);
+  }
+
+  JsonObject latest = data["readings"][0].as<JsonObject>();
+  resp->timestamp = latest["timestamp"] | "";
+  for (JsonObject r : latest["data"].as<JsonArray>()) {
+    String id = r["stationId"] | "";
+    for (auto& station : resp->stations) {
+      if (station.id == id) {
+        station.value = r["value"] | 0.0f;
+        station.hasValue = true;
+        break;
+      }
+    }
+  }
+  return resp;
+}
+
+unique_ptr<PsiResponse> NeaWeatherClient::getPsi() {
+  unique_ptr<JsonDocument> doc = performRequest(PSI_PATH);
+  if (doc == nullptr) {
+    return nullptr;
+  }
+
+  JsonObject item = (*doc)["data"]["items"][0].as<JsonObject>();
+  JsonObject psi = item["readings"]["psi_twenty_four_hourly"].as<JsonObject>();
+  if (psi.isNull()) {
+    return nullptr;
+  }
+
+  unique_ptr<PsiResponse> resp = make_unique<PsiResponse>();
+  resp->timestamp = item["timestamp"] | "";
+  resp->west = psi["west"] | -1;
+  resp->east = psi["east"] | -1;
+  resp->central = psi["central"] | -1;
+  resp->north = psi["north"] | -1;
+  resp->south = psi["south"] | -1;
+  return resp;
+}
+
+unique_ptr<UvResponse> NeaWeatherClient::getUv() {
+  unique_ptr<JsonDocument> doc = performRequest(UV_PATH);
+  if (doc == nullptr) {
+    return nullptr;
+  }
+
+  // index[] is newest first
+  JsonObject latest = (*doc)["data"]["records"][0]["index"][0].as<JsonObject>();
+  if (latest.isNull()) {
+    return nullptr;
+  }
+
+  unique_ptr<UvResponse> resp = make_unique<UvResponse>();
+  resp->hour = latest["hour"] | "";
+  resp->value = latest["value"] | -1;
+  return resp;
 }
 
 NeaWeatherClient neaWeatherClient;

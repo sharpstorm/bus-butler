@@ -129,3 +129,77 @@ String weatherConditionToShortString(WeatherCondition condition) {
       return "???";
   }
 }
+bool isRainyCondition(WeatherCondition condition) {
+  switch (condition) {
+    case WeatherCondition::LightRain:
+    case WeatherCondition::ModerateRain:
+    case WeatherCondition::HeavyRain:
+    case WeatherCondition::PassingShowers:
+    case WeatherCondition::LightShowers:
+    case WeatherCondition::Showers:
+    case WeatherCondition::HeavyShowers:
+    case WeatherCondition::Thunderstorm:
+    case WeatherCondition::HeavyThunderstorm:
+    case WeatherCondition::HeavyThunderstormWithGustyWinds:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool isNightCondition(WeatherCondition condition) {
+  return condition == WeatherCondition::FairNight ||
+         condition == WeatherCondition::PartlyCloudyNight;
+}
+
+const StationReading* StationReadingsResponse::nearest(float lat,
+                                                       float lon) const {
+  const StationReading* best = nullptr;
+  float bestDist = 1e9;
+  float cosLat = cos(lat * DEG_TO_RAD);
+  for (const auto& station : stations) {
+    if (!station.hasValue) continue;
+    float dLat = station.latitude - lat;
+    float dLon = (station.longitude - lon) * cosLat;
+    float dist = dLat * dLat + dLon * dLon;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = &station;
+    }
+  }
+  return best;
+}
+
+int PsiResponse::forRegion(const String& region) const {
+  if (region == "west") return west;
+  if (region == "east") return east;
+  if (region == "north") return north;
+  if (region == "south") return south;
+  return central;
+}
+
+WeatherCondition periodConditionForRegion(const PeriodForecast& period,
+                                          const String& region) {
+  if (region == "west") return period.regionWest;
+  if (region == "east") return period.regionEast;
+  if (region == "north") return period.regionNorth;
+  if (region == "south") return period.regionSouth;
+  return period.regionCentral;
+}
+
+String periodShortLabel(const String& timePeriod) {
+  String t = timePeriod;
+  t.toLowerCase();
+  if (t.indexOf(MIDNIGHT_STRING) >= 0) return "Late";
+  if (t.indexOf(MORNING_STRING) >= 0) return "Morn";
+  if (t.indexOf(AFTERNOON_STRING) >= 0) return "Aft";
+  if (t.indexOf(NIGHT_STRING) >= 0) return "Night";
+  return "Later";
+}
+
+bool isHeavyRainCondition(WeatherCondition condition) {
+  return condition == WeatherCondition::HeavyRain ||
+         condition == WeatherCondition::HeavyShowers ||
+         condition == WeatherCondition::HeavyThunderstorm ||
+         condition == WeatherCondition::HeavyThunderstormWithGustyWinds;
+}

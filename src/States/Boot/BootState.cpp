@@ -4,6 +4,7 @@
 #include <WiFi.h>
 
 #include "../../Config/ConfigManager.h"
+#include "../../Data/DataStore.h"
 #include "../../Util/Time.h"
 #include "../../WebConfigServer/WebConfigServer.h"
 #include "../../Wifi/WifiConfigManager.h"
@@ -56,15 +57,14 @@ void BootState::enter() {
 
   mdnsClient.start();
   webConfigServer.start();
+  dataStore.begin();
 
-  appStateManager.changeState(AppState::Homescreen);
+  appStateManager.changeState(AppState::Home);
 }
 
 void BootState::loop() {}
 
 void BootState::exit() {}
-
-void BootState::handleTouch(int x, int y) {}
 
 bool BootState::isSetupComplete() {
   bool isWifiConfigured = wifiConfigManager.getConfig().isConfigured;

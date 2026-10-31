@@ -49,6 +49,19 @@ export const MOCK_SCENARIOS = {
   initialBusStopCode: '83139',
 
   /**
+   * Saved stops for the multi-stop portal
+   */
+  initialStops: [
+    { code: '17179', name: 'Opp Clementi Stn' },
+    { code: '17171', name: 'Clementi Stn' },
+  ],
+
+  /**
+   * Return an MRT disruption from /api/mrt
+   */
+  mrtDisruption: false,
+
+  /**
    * Set initial bus service order (comma-separated)
    * Empty string = no custom order (uses API order)
    * Example: '73,156,74' to show services in that order

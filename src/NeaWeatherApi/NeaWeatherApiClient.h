@@ -13,6 +13,12 @@
 #define TWO_HOUR_FORECAST_PATH "/v2/real-time/api/two-hr-forecast"
 #define TWENTY_FOUR_HOUR_FORECAST_PATH \
   "/v2/real-time/api/twenty-four-hr-forecast"
+#define FOUR_DAY_OUTLOOK_PATH "/v2/real-time/api/four-day-outlook"
+#define AIR_TEMPERATURE_PATH "/v2/real-time/api/air-temperature"
+#define RELATIVE_HUMIDITY_PATH "/v2/real-time/api/relative-humidity"
+#define RAINFALL_PATH "/v2/real-time/api/rainfall"
+#define PSI_PATH "/v2/real-time/api/psi"
+#define UV_PATH "/v2/real-time/api/uv"
 #define HTTPS_PORT 443
 #define NEA_API_MAX_RETRIES 3
 #define NEA_API_RETRY_DELAY_MS 1000
@@ -25,6 +31,11 @@ class NeaWeatherClient {
 
   unique_ptr<TwoHourForecastResponse> getTwoHourForecast();
   unique_ptr<TwentyFourHourForecastResponse> getTwentyFourHourForecast();
+  unique_ptr<FourDayOutlookResponse> getFourDayOutlook();
+  // path: AIR_TEMPERATURE_PATH, RELATIVE_HUMIDITY_PATH or RAINFALL_PATH
+  unique_ptr<StationReadingsResponse> getStationReadings(const char* path);
+  unique_ptr<PsiResponse> getPsi();
+  unique_ptr<UvResponse> getUv();
 
   // Get forecast for a specific area from two-hour forecast
   WeatherCondition getForecastForArea(const TwoHourForecastResponse* response,

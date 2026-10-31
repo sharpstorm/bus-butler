@@ -2,7 +2,6 @@
 
 #include "../../Wifi/MDnsClient.h"
 #include "../IAppState.h"
-#include "../ITouchHandler.h"
 #include "SetupScreenRenderer.h"
 
 class SetupState : public IAppState {
@@ -10,10 +9,9 @@ class SetupState : public IAppState {
   SetupScreenRenderer setupRenderer;
 
  public:
-  void enter();
-  void loop();
-  void exit();
+  void enter() override;
+  void loop() override;
+  void exit() override;
 
-  void handleTouch(int x, int y);
   bool isSetupComplete();
 };

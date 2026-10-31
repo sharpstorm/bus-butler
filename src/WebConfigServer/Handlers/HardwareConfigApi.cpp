@@ -13,14 +13,14 @@ void HardwareConfigApi::setScreenBrightness(AsyncWebServerRequest* request,
   }
 
   uint8_t brightness = reqBody["brightness"].as<uint8_t>();
+  // Applied by DisplayPower on the UI task when it sees the new revision
   configManager.saveBrightness(brightness);
-  screen.setBrightness(brightness);
   request->send(200, MimeType::JSON,
                 "{ \"newBrightness\": " + String(brightness) + " }");
 }
 
 void HardwareConfigApi::getScreenBrightness(AsyncWebServerRequest* request) {
-  uint8_t brightness = screen.getBrightness();
+  uint8_t brightness = configManager.getBrightness();
   request->send(200, MimeType::JSON,
                 "{ \"brightness\": " + String(brightness) + " }");
 }

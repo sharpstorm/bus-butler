@@ -2,7 +2,6 @@
 
 #include "../../Wifi/MDnsClient.h"
 #include "../IAppState.h"
-#include "../ITouchHandler.h"
 #include "BootScreenRenderer.h"
 
 class BootState : public IAppState {
@@ -12,10 +11,9 @@ class BootState : public IAppState {
   bool isInternetConnected();
 
  public:
-  void enter();
-  void loop();
-  void exit();
+  void enter() override;
+  void loop() override;
+  void exit() override;
 
-  void handleTouch(int x, int y);
   bool isSetupComplete();
 };

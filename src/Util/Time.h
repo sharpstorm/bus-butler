@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Arduino.h"
+#include <time.h>
 
 #define NTP_SERVER "time.google.com"
 #define GMT_OFFSET_SECS 28800
@@ -20,6 +21,10 @@ class TimeUtil {
   static time_t getUnixTime();
   static String getTimeString();
   static String getDateString();
+  // Local time; false until the clock has been synced.
+  static bool localTime(struct tm& out);
+  static String fullDayName(int weekday);
+  static bool isSynced();
 
   static TimeSyncer syncer;
   static void printLocalTime();
