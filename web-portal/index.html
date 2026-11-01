@@ -676,6 +676,32 @@
               </div>
               <span class="status-message" id="lta-api-status" role="status"></span>
             </form>
+
+            <div class="card" id="notify-card">
+              <div class="card-title-row">
+                <h2 class="card-title">Notifications</h2>
+                <span class="chip" id="notify-chip">Checking...</span>
+              </div>
+              <p class="muted">Apps on your network (such as Sanctuary) can push toasts, Home page banners and full-screen alerts to this screen. They need this token, sent as <code>Authorization: Bearer &lt;token&gt;</code> to <code>/api/notify</code>. Without a token, pushes are refused.</p>
+              <div class="inline-form">
+                <label class="sr-only" for="notify-token-input">Token</label>
+                <input id="notify-token-input" class="input mono" type="text" placeholder="Paste a token (16-64 characters)" autocomplete="off" spellcheck="false" />
+                <button type="button" class="btn btn-primary" id="notify-save-btn">Save token</button>
+              </div>
+              <div class="card-actions">
+                <span class="status-message" id="notify-status" role="status"></span>
+                <button class="btn btn-secondary" id="notify-generate-btn" type="button">Generate new token</button>
+                <button class="btn btn-danger" id="notify-off-btn" type="button">Turn off</button>
+              </div>
+              <div class="card-title-row" style="margin-top: 12px">
+                <span class="muted">Show a sample on the screen</span>
+                <div class="inline-form tight">
+                  <button class="btn btn-secondary" data-notify-test="toast" type="button">Toast</button>
+                  <button class="btn btn-secondary" data-notify-test="banner" type="button">Banner</button>
+                  <button class="btn btn-secondary" data-notify-test="full" type="button">Full screen</button>
+                </div>
+              </div>
+            </div>
           </section>
 
           <!-- Diagnostics -->

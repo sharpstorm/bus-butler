@@ -48,3 +48,13 @@ extern const GFXfont IconXl;  // Material Icons 26pt
 #define ICON_MASK "x"  // masks
 #define ICON_UV "y"  // light_mode
 #define ICON_QR "z"  // qr_code_2
+#define ICON_DOORBELL "A"  // doorbell
+#define ICON_VACUUM "B"  // cleaning_services
+#define ICON_BELL "C"  // notifications
+#define ICON_CLOSE "D"  // close
+#define ICON_POWER "E"  // power_settings_new
+#define ICON_CAMERA "F"  // photo_camera
+#define ICON_HOME "G"  // home
+#define ICON_ERROR "H"  // error
+#define ICON_BATTERY "I"  // battery_alert
+#define ICON_ROBOT "J"  // smart_toy

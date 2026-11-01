@@ -22,7 +22,11 @@ class AppStateManager {
   // then page-to-page swipes.
   void dispatchGesture(const Gesture& gesture);
 
-  // Open an overlay (controls, QR) that returns to the current state.
+  // Overlays sit over a page and return to it when closed.
+  static bool isOverlay(AppState state);
+
+  // Open an overlay (controls, QR, notification) that returns to the
+  // current page.
   // Both animate.
   void openOverlay(AppState overlay);
   void closeOverlay();

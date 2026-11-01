@@ -307,4 +307,24 @@ void ConfigManager::saveDisplayConfig(const DisplayConfig& config) {
   unlock();
 }
 
+// ---------------------------------------------------------------------------
+// Notifications
+
+void ConfigManager::saveNotifyToken(const String& token) {
+  lock();
+  preferences.begin(CONFIG_NAMESPACE, false);
+  preferences.putString(CONFIG_NOTIFY_TOKEN, token);
+  preferences.end();
+  unlock();
+}
+
+String ConfigManager::getNotifyToken() {
+  lock();
+  preferences.begin(CONFIG_NAMESPACE, true);
+  String token = preferences.getString(CONFIG_NOTIFY_TOKEN, "");
+  preferences.end();
+  unlock();
+  return token;
+}
+
 ConfigManager configManager;

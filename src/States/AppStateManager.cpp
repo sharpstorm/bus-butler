@@ -32,8 +32,14 @@ int AppStateManager::pageIndex(AppState state) {
   return -1;
 }
 
+bool AppStateManager::isOverlay(AppState state) {
+  return state == AppState::Controls || state == AppState::StopQr ||
+         state == AppState::Notify;
+}
+
 void AppStateManager::openOverlay(AppState overlay) {
-  if (activeState != AppState::Controls && activeState != AppState::StopQr) {
+  if (activeState == overlay) return;
+  if (!isOverlay(activeState)) {
     returnState = activeState;
   }
   anim::capture();

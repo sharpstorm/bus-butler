@@ -10,6 +10,7 @@
 #include "Handlers/StopsConfigApi.h"
 #include "Handlers/WeatherConfigApi.h"
 #include "Handlers/WifiConfigApi.h"
+#include "../Notify/NotifyApi.h"
 
 WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
   server.on("/", HTTP_GET, StaticServeHandler::handleHTML);
@@ -67,6 +68,8 @@ WebConfigServer::WebConfigServer() : server(HTTP_PORT) {
 
   server.on("/api/test/bus-arrival", HTTP_POST, ConfigTestApi::queryBusArrival);
   server.on("/api/test/weather", HTTP_POST, ConfigTestApi::queryWeather);
+
+  NotifyApi::registerRoutes(server);
 }
 
 void WebConfigServer::start() { server.begin(); }

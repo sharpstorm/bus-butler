@@ -5,6 +5,7 @@
 #include "../../Config/ConfigManager.h"
 #include "../../LtaDatamallClient/BusArrivalApiTypes.h"
 #include "../../NeaWeatherApi/NeaWeatherApiTypes.h"
+#include "../../Notify/Notification.h"
 #include "../IAppState.h"
 
 using namespace std;
@@ -26,8 +27,9 @@ using namespace std;
 // Forecast older than this shows "OLD" instead of "2HR"
 #define WEATHER_STALE_S (30 * 60)
 
-// The banner slot along the bottom (only one at a time; MRT wins)
-enum class HomeAlert { None, Mrt, Rain };
+// The banner slot along the bottom, one at a time. Order: pushed banners of
+// priority 2+ (high / urgent), MRT disruption, other pushed banners, rain.
+enum class HomeAlert { None, Mrt, Rain, Notice };
 
 class HomeState : public IAppState {
  public:
@@ -46,6 +48,9 @@ class HomeState : public IAppState {
   int pageCount = 1;
   bool alertShown = false;
   HomeAlert alert = HomeAlert::None;
+  Notification notice;  // the pushed banner shown, when alert == Notice
+  int noticeCount = 0;  // pushed banners in total
+  uint32_t lastBannerVersion = 0;
   String town;
   String region;
 
@@ -69,6 +74,7 @@ class HomeState : public IAppState {
                     long now, bool stale);
   void renderAlert();
   void renderRainAlert();
+  void renderNoticeAlert();
   WeatherCondition townNowcast();
   int16_t contentBottom() { return alertShown ? HOME_TOP + 200 : 264; }
 };

@@ -522,5 +522,24 @@ export function createMockApiMiddleware() {
   app.post('/api/refresh', (req, res) => res.status(202).json({ success: true }))
   app.post('/api/restart', (req, res) => res.status(202).json({ success: true }))
 
+  // Notifications
+  let notifyToken = ''
+  app.get('/api/config/notify', (req, res) =>
+    res.json({ tokenSet: notifyToken.length > 0, full: 0, banner: 1, toast: 0 }),
+  )
+  app.post('/api/config/notify', (req, res) => {
+    const token = String((req.body && req.body.token) || '').trim()
+    if (token && (token.length < 16 || token.length > 64)) {
+      return res.status(400).json({ error: 'The token must be 16 to 64 characters' })
+    }
+    notifyToken = token
+    res.json({ success: true })
+  })
+  app.post('/api/config/notify/generate', (req, res) => {
+    notifyToken = [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')
+    res.json({ token: notifyToken })
+  })
+  app.post('/api/config/notify/test', (req, res) => res.json({ success: true }))
+
   return app
 }

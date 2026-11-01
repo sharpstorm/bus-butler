@@ -1,6 +1,9 @@
 #include "HomeState.h"
 
 #include "../../Data/DataStore.h"
+#include "../../Notify/NotifyLook.h"
+#include "../../Notify/NotifyStore.h"
+#include "../../Notify/NotifyUi.h"
 #include "../../Screen/Fonts/BusTypes.h"
 #include "../../Screen/Screen.h"
 #include "../../Ui/Anim.h"
@@ -117,6 +120,7 @@ void HomeState::loop() {
     dirty = true;
   }
   if (dataStore.getVersion() != lastDataVersion) dirty = true;
+  if (notifyStore.getBannerVersion() != lastBannerVersion) dirty = true;
   if (now - lastRenderMs > RENDER_INTERVAL_MS) dirty = true;
 
   struct tm t;
@@ -163,10 +167,21 @@ void HomeState::render() {
   lastMinute = TimeUtil::localTime(t) ? t.tm_min : -1;
 
   arrivingDots.clear();
+  lastBannerVersion = notifyStore.getBannerVersion();
+  vector<Notification> banners = notifyStore.banners();
+  noticeCount = banners.size();
+  if (!banners.empty()) notice = banners[0];
+
   dataStore.lock();
   alert = HomeAlert::None;
-  if (dataStore.trainAlerts != nullptr && dataStore.trainAlerts->isDisrupted()) {
+  bool mrt = dataStore.trainAlerts != nullptr &&
+             dataStore.trainAlerts->isDisrupted();
+  if (!banners.empty() && notice.priority >= 2) {
+    alert = HomeAlert::Notice;
+  } else if (mrt) {
     alert = HomeAlert::Mrt;
+  } else if (!banners.empty()) {
+    alert = HomeAlert::Notice;
   } else if (dataStore.weatherNow.heavyRainNearby ||
              isHeavyRainCondition(townNowcast())) {
     alert = HomeAlert::Rain;
@@ -179,6 +194,7 @@ void HomeState::render() {
   renderBuses(bottom);
   if (alert == HomeAlert::Mrt) renderAlert();
   if (alert == HomeAlert::Rain) renderRainAlert();
+  if (alert == HomeAlert::Notice) renderNoticeAlert();
   dataStore.unlock();
 
   anim::present();
@@ -530,6 +546,36 @@ void HomeState::renderRainAlert() {
   ui::text(&FigMed, "RAIN", 460, HOME_ALERT_Y + 30, NEON_BLUE, ui::Right);
 }
 
+// Pushed banner (see Notify/). Tapping it opens the full text and actions.
+void HomeState::renderNoticeAlert() {
+  uint16_t accent = notifyAccent(notice.accent, notice.icon);
+  ui::section(8, HOME_ALERT_Y, 464, HOME_ALERT_H, accent);
+  ui::text(&IconMd, notifyIconGlyph(notice.icon), 20, HOME_ALERT_Y + 34,
+           accent);
+
+  String title = notice.title.length() ? notice.title : notice.body;
+  String detail = notice.title.length() ? notice.body : String("");
+  // The right-hand label: how many more, or where it came from
+  String label = noticeCount > 1 ? "+" + String(noticeCount - 1) : notice.source;
+  label.toUpperCase();
+  label = ui::fit(&SgSm, label, 90);
+  int16_t labelW = label.length() ? ui::width(&SgSm, label) + 16 : 0;
+
+  const int16_t textW = 464 - 48 - 12 - labelW;
+  if (detail.length()) {
+    ui::text(&FigMed, ui::fit(&FigMed, title, textW), 48, HOME_ALERT_Y + 20,
+             TEXT_MAIN);
+    ui::text(&FigSm, ui::fit(&FigSm, detail, textW), 48, HOME_ALERT_Y + 37,
+             GRAY_LIGHT);
+  } else {
+    ui::text(&FigMed, ui::fit(&FigMed, title, textW), 48, HOME_ALERT_Y + 29,
+             TEXT_MAIN);
+  }
+  if (label.length()) {
+    ui::text(&SgSm, label, 460, HOME_ALERT_Y + 29, accent, ui::Right);
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 bool HomeState::onGesture(const Gesture& g) {
@@ -566,8 +612,13 @@ bool HomeState::onGesture(const Gesture& g) {
       if (g.startsIn(HOME_HERO_X + HOME_HERO_W - 44, HOME_TOP, 44, 40)) {
         appStateManager.openOverlay(AppState::Controls);
       } else if (alertShown && g.startsIn(8, HOME_ALERT_Y, 464, HOME_ALERT_H)) {
-        appStateManager.goToPage(alert == HomeAlert::Mrt ? AppState::MrtPage
-                                                         : AppState::WeatherPage);
+        if (alert == HomeAlert::Notice) {
+          notifyUi.openDetail(notice.id);
+        } else {
+          appStateManager.goToPage(alert == HomeAlert::Mrt
+                                       ? AppState::MrtPage
+                                       : AppState::WeatherPage);
+        }
       } else if ((inBusHeader || inBusBody) && !stops.empty()) {
         const BusStopConfig& stop = stops[stopIndex];
         qrRequest.title = stop.name.length() ? stop.name : "Bus stop";

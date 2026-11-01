@@ -22,6 +22,23 @@ enum class Slide { Left, Right, Up, Down };
 void present();
 void presentRows(int16_t y, int16_t h);
 
+/*
+  A floating layer (e.g. a toast) drawn on top of whatever the screens
+  present, without the screens knowing about it.
+
+  The framebuffer always holds the page itself. Every time rows are sent to
+  the display, the rows under the overlay band are saved, draw() paints the
+  overlay into the canvas, the rows are sent, and the saved rows are put
+  back. draw() must only touch rows [y, y + h).
+*/
+typedef void (*OverlayDraw)();
+void setOverlay(int16_t y, int16_t h, OverlayDraw draw);
+// Removes the overlay and sends the page rows that were under it.
+void clearOverlay();
+// Re-sends the overlay band (after the overlay's own content changed).
+void refreshOverlay();
+bool hasOverlay();
+
 void capture();
 bool isCapturing();
 

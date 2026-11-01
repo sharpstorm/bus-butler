@@ -1,3 +1,10 @@
+export type NotifyConfigRespBody = {
+  tokenSet: boolean
+  full: number
+  banner: number
+  toast: number
+}
+
 export type WifiNetworkMetadata = {
   ssid: string
   rssi: number
@@ -319,6 +326,38 @@ export class Api {
       x.json(),
     )
     return resp as WeatherRegionListRespBody
+  }
+
+  // Notifications
+  static async getNotifyConfig() {
+    const resp = await fetch('/api/config/notify').then((x) => x.json())
+    return resp as NotifyConfigRespBody
+  }
+
+  static async saveNotifyToken(token: string) {
+    const resp = await fetch('/api/config/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+    const body = await resp.json()
+    if (!resp.ok) throw new Error(body.error || 'Could not save the token')
+    return body
+  }
+
+  static async generateNotifyToken() {
+    const resp = await fetch('/api/config/notify/generate', { method: 'POST' })
+    if (!resp.ok) throw new Error('Could not make a token')
+    return (await resp.json()) as { token: string }
+  }
+
+  static async testNotify(style: string) {
+    const resp = await fetch('/api/config/notify/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ style }),
+    })
+    if (!resp.ok) throw new Error('The device refused the test')
   }
 
   // Test APIs

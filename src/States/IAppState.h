@@ -35,6 +35,7 @@ enum AppState {
   StatusPage,
   StopQr,
   Controls,
+  Notify,  // full-screen notification overlay
 };
 
 class IAppStateResolver {

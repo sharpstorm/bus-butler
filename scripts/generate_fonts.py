@@ -27,6 +27,7 @@ OUT_DIR = os.path.join(HERE, '..', 'src', 'Ui', 'Fonts')
 DEGREE = '`'  # glyph slot that holds the degree sign in text fonts
 
 # Icon slots. Keep in sync with the ICON_* defines emitted into UiFonts.h.
+ICON_FIRST, ICON_LAST = ord('A'), ord('z')
 ICONS = [
     ('a', 'SUN', 'wb_sunny'),
     ('b', 'MOON', 'nights_stay'),
@@ -54,6 +55,17 @@ ICONS = [
     ('x', 'MASK', 'masks'),
     ('y', 'UV', 'light_mode'),
     ('z', 'QR', 'qr_code_2'),
+    # Notifications. Upper-case slots; the font spans 'A'..'z'.
+    ('A', 'DOORBELL', 'doorbell'),
+    ('B', 'VACUUM', 'cleaning_services'),
+    ('C', 'BELL', 'notifications'),
+    ('D', 'CLOSE', 'close'),
+    ('E', 'POWER', 'power_settings_new'),
+    ('F', 'CAMERA', 'photo_camera'),
+    ('G', 'HOME', 'home'),
+    ('H', 'ERROR', 'error'),
+    ('I', 'BATTERY', 'battery_alert'),
+    ('J', 'ROBOT', 'smart_toy'),
 ]
 
 # (C name, file, point size, weight, first, last)
@@ -157,7 +169,7 @@ def main():
     for (name, pt) in ICON_FONTS:
         face = load_face(os.path.join(src, 'MaterialIcons-Regular.ttf'), pt)
         glyphs = {ord(ch): render(face, cps[icon]) for (ch, _, icon) in ICONS}
-        body, size = emit_font(name, glyphs, ord('a'), ord('z'), face.size.height >> 6)
+        body, size = emit_font(name, glyphs, ICON_FIRST, ICON_LAST, face.size.height >> 6)
         cpp.append(body)
         hdr.append(f'extern const GFXfont {name};  // Material Icons {pt}pt')
         total += size

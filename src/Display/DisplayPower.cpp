@@ -52,6 +52,9 @@ void DisplayPower::apply(uint16_t fadeDuration, bool force) {
   if (idleDimmed) {
     level = min(level, config.idleDimLevel);
   }
+  if (boost) {
+    level = config.brightness;
+  }
   if (nightActive != wasNight) {
     fadeDuration = max<uint16_t>(fadeDuration, FADE_NIGHT);
   }
@@ -114,6 +117,22 @@ bool DisplayPower::onTouch() {
     return true;
   }
   return false;
+}
+
+void DisplayPower::wake() {
+  lastTouchMs = millis();
+  if (idleDimmed) {
+    idleDimmed = false;
+    apply(FADE_WAKE);
+  }
+}
+
+void DisplayPower::setBoost(bool on) {
+  if (boost == on) return;
+  boost = on;
+  lastTouchMs = millis();
+  idleDimmed = false;
+  apply(FADE_WAKE);
 }
 
 void DisplayPower::preview(uint8_t brightness) {

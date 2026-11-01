@@ -5,6 +5,7 @@
 #include "Home/HomeState.h"
 #include "IAppState.h"
 #include "Mrt/MrtPageState.h"
+#include "Notify/NotifyState.h"
 #include "Setup/SetupState.h"
 #include "Status/StatusPageState.h"
 #include "StopQr/StopQrState.h"

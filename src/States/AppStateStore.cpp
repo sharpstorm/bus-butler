@@ -24,6 +24,8 @@ IAppState* AppStateStore::getStateRefById(AppState state) {
       return &stopQrState;
     case AppState::Controls:
       return &controlsState;
+    case AppState::Notify:
+      return &notifyState;  // global: NotifyUi drives it
     default:
       return nullptr;
   }

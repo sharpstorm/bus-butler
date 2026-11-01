@@ -31,9 +31,47 @@ static bool ensureBuffers() {
   return fromBuf != nullptr && toBuf != nullptr && framebuffer() != nullptr;
 }
 
+// ---- Overlay layer ----------------------------------------------------------
+
+static OverlayDraw overlayDraw = nullptr;
+static int16_t overlayY = 0, overlayH = 0;
+static uint16_t* overlaySaved = nullptr;  // rows under the overlay
+static int16_t overlaySavedH = 0;
+
+static bool overlayHits(int16_t y, int16_t h) {
+  return overlayDraw != nullptr && y < overlayY + overlayH &&
+         overlayY < y + h;
+}
+
+// Paints the overlay into the framebuffer, keeping the page rows under it.
+static bool overlayBegin() {
+  if (overlaySaved == nullptr || overlaySavedH < overlayH) {
+    free(overlaySaved);
+    overlaySaved = (uint16_t*)heap_caps_malloc((size_t)W * overlayH * 2,
+                                               MALLOC_CAP_SPIRAM);
+    overlaySavedH = overlaySaved ? overlayH : 0;
+  }
+  if (overlaySaved == nullptr) return false;
+  memcpy(overlaySaved, framebuffer() + (size_t)overlayY * W,
+         (size_t)W * overlayH * 2);
+  overlayDraw();
+  return true;
+}
+
+static void overlayEnd() {
+  memcpy(framebuffer() + (size_t)overlayY * W, overlaySaved,
+         (size_t)W * overlayH * 2);
+}
+
+static void sendRows(int16_t y, int16_t h) {
+  g->draw16bitRGBBitmap(0, y, framebuffer() + (size_t)y * W, W, h);
+}
+
 static void flushAll() {
   uint32_t start = micros();
+  bool drawn = overlayDraw != nullptr && overlayBegin();
   gfx->flush();
+  if (drawn) overlayEnd();
   lastStats.flushUs = micros() - start;
 }
 
@@ -44,7 +82,9 @@ static void flushRows(int16_t y, int16_t h) {
   }
   if (y + h > H) h = H - y;
   if (h <= 0) return;
-  g->draw16bitRGBBitmap(0, y, framebuffer() + (size_t)y * W, W, h);
+  bool drawn = overlayHits(y, h) && overlayBegin();
+  sendRows(y, h);
+  if (drawn) overlayEnd();
 }
 
 // A capture that never got its transition must not freeze the screen.
@@ -62,6 +102,36 @@ void present() {
 void presentRows(int16_t y, int16_t h) {
   if (!holding()) flushRows(y, h);
 }
+
+void setOverlay(int16_t y, int16_t h, OverlayDraw draw) {
+  if (y < 0) {
+    h += y;
+    y = 0;
+  }
+  if (y + h > H) h = H - y;
+  if (h <= 0 || draw == nullptr) return;
+  bool moved = overlayDraw != nullptr && (y != overlayY || h != overlayH);
+  int16_t oldY = overlayY, oldH = overlayH;
+  overlayDraw = nullptr;
+  if (moved && !holding()) flushRows(oldY, oldH);
+  overlayY = y;
+  overlayH = h;
+  overlayDraw = draw;
+  if (!holding()) flushRows(overlayY, overlayH);
+}
+
+void clearOverlay() {
+  if (overlayDraw == nullptr) return;
+  overlayDraw = nullptr;
+  // A held frame is being drawn; it is sent whole when the transition ends.
+  if (!holding()) flushRows(overlayY, overlayH);
+}
+
+void refreshOverlay() {
+  if (overlayDraw != nullptr && !holding()) flushRows(overlayY, overlayH);
+}
+
+bool hasOverlay() { return overlayDraw != nullptr; }
 
 void capture() {
   if (!ensureBuffers()) return;  // No PSRAM: transitions just cut

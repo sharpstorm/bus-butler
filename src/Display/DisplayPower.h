@@ -21,6 +21,14 @@ class DisplayPower {
   // touch should only wake it.
   bool onTouch();
 
+  // Something wants attention (e.g. a notification): end idle dimming as a
+  // touch would, without the next touch being swallowed.
+  void wake();
+  // While boosted the backlight ignores night and idle dimming (full-screen
+  // notifications), so a doorbell at night is readable.
+  void setBoost(bool on);
+  bool isBoosted() { return boost; }
+
   // Live brightness while dragging the slider; endPreview() saves it.
   void preview(uint8_t brightness);
   void endPreview(bool save);
@@ -44,6 +52,7 @@ class DisplayPower {
   bool nightActive = false;
   bool nightPalette = false;
   int16_t previewLevel = -1;
+  bool boost = false;
   int16_t applied = -1;
 
   // Backlight fade

@@ -875,12 +875,14 @@ export class DashboardState {
       e.preventDefault()
       this.saveLtaApiKey()
     })
+    this.bindNotify()
   }
 
   private async loadConnection() {
     const [wifi, key] = await Promise.allSettled([
       Api.getConfiguredWifiSsid(),
       Api.getSavedLtaApiKey(),
+      this.loadNotify(),
     ])
     const wifiChip = $('current-wifi-status')
     if (wifi.status === 'fulfilled' && wifi.value.ssid) {
@@ -961,6 +963,69 @@ export class DashboardState {
       this.loadConnection()
     } catch (err: any) {
       setStatus(status, err.message, 'error')
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Notifications
+
+  private bindNotify() {
+    const status = $('notify-status')
+    const input = $<HTMLInputElement>('notify-token-input')
+    const save = async (token: string, message: string) => {
+      try {
+        await Api.saveNotifyToken(token)
+        setStatus(status, message, 'success')
+        await this.loadNotify()
+      } catch (err: any) {
+        setStatus(status, err.message, 'error')
+      }
+    }
+    $('notify-save-btn').addEventListener('click', () => {
+      const token = input.value.trim()
+      if (!token) {
+        setStatus(status, 'Paste a token first, or generate one', 'error')
+        return
+      }
+      save(token, 'Token saved. Apps must send this one from now on.')
+    })
+    $('notify-off-btn').addEventListener('click', () => {
+      if (!confirm('Turn notifications off? Apps will be refused until you set a token again.')) return
+      input.value = ''
+      save('', 'Notifications are off.')
+    })
+    const generate = $<HTMLButtonElement>('notify-generate-btn')
+    generate.addEventListener('click', () =>
+      withBusy(generate, 'Generating...', async () => {
+        const { token } = await Api.generateNotifyToken()
+        input.value = token
+        input.select()
+        setStatus(status, 'New token saved. Copy it into Sanctuary now: the device won\'t show it again.', 'success')
+        await this.loadNotify()
+      }).catch((err: any) => setStatus(status, err.message, 'error')),
+    )
+    document.querySelectorAll<HTMLButtonElement>('[data-notify-test]').forEach((btn) => {
+      btn.addEventListener('click', () =>
+        withBusy(btn, 'Sent', async () => {
+          await Api.testNotify(btn.dataset.notifyTest || 'toast')
+          await new Promise((r) => setTimeout(r, 1200))
+        }).catch((err: any) => setStatus(status, err.message, 'error')),
+      )
+    })
+  }
+
+  private async loadNotify() {
+    const chip = $('notify-chip')
+    try {
+      const cfg = await Api.getNotifyConfig()
+      const active = cfg.full + cfg.banner + cfg.toast
+      chip.textContent = cfg.tokenSet
+        ? active ? `On · ${active} showing` : 'On'
+        : 'Off'
+      chip.className = cfg.tokenSet ? 'chip ok' : 'chip warn'
+    } catch {
+      chip.textContent = 'Unknown'
+      chip.className = 'chip error'
     }
   }
 

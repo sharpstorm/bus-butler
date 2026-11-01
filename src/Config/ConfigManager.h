@@ -31,6 +31,9 @@
 #define CONFIG_NIGHT_LVL "night-lvl"
 #define CONFIG_NIGHT_THEME "night-theme"
 
+// Notifications
+#define CONFIG_NOTIFY_TOKEN "notify-token"
+
 #define MAX_BUS_STOPS 8
 
 using namespace std;
@@ -104,6 +107,11 @@ class ConfigManager {
   DisplayConfig getDisplayConfig();
   void saveDisplayConfig(const DisplayConfig& config);
   uint32_t getDisplayRevision() { return displayRevision; }
+
+  // Bearer token that apps (e.g. Sanctuary) send with notification pushes.
+  // Empty means notifications are switched off.
+  void saveNotifyToken(const String& token);
+  String getNotifyToken();
 };
 
 extern ConfigManager configManager;
