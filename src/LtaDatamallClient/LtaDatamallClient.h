@@ -25,6 +25,7 @@ using namespace std;
 class LtaDatamallClient {
  private:
   String apiKey;
+  int lastError = 0;  // HTTP status of the last request, or negative on failure
   WiFiClientSecure wifiClient;
   HTTPClient httpClient;
 
@@ -34,6 +35,9 @@ class LtaDatamallClient {
   LtaDatamallClient();
   bool isConfigured();
   void reconfigure();
+  // HTTP status of the last request (200 on success), or a negative
+  // HTTPClient error (-1 = connect/TLS failed) / -2 for bad JSON.
+  int getLastError() { return lastError; }
 
   unique_ptr<BusArrivalApiResponse> getBusArrival(String busStopCode);
 

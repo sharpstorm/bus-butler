@@ -176,7 +176,8 @@ void DataStore::fetchBus() {
 
   lock();
   if (stop == activeStop) {  // Ignore results for a stop we switched away from
-    markAttempt(busStatus, resp != nullptr, resp != nullptr ? 200 : -1);
+    markAttempt(busStatus, resp != nullptr,
+                resp != nullptr ? 200 : ltaClient->getLastError());
     if (resp != nullptr) {
       busArrival = move(resp);
       busArrivalStop = stop;
@@ -196,7 +197,8 @@ void DataStore::fetchTrain() {
 
   unique_ptr<TrainAlerts> resp = ltaClient->getTrainServiceAlerts();
   lock();
-  markAttempt(trainStatus, resp != nullptr, resp != nullptr ? 200 : -1);
+  markAttempt(trainStatus, resp != nullptr,
+              resp != nullptr ? 200 : ltaClient->getLastError());
   if (resp != nullptr) {
     trainAlerts = move(resp);
   }

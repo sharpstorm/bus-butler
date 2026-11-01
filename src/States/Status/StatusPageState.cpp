@@ -43,6 +43,9 @@ static void sourceRow(int16_t x, int16_t w, int16_t y, const String& name,
       color = STATUS_RED;
       value = s.lastError == -11 ? "No API key"
               : s.lastError == -10 ? "No stop"
+              : s.lastError == 401 || s.lastError == 403 ? "Key rejected"
+              : s.lastError == -1 ? "TLS/connect fail"
+              : s.lastError >= 400 ? "HTTP " + String(s.lastError)
               : s.lastSuccessMs > 0
                   ? "Failing, ok " +
                         ui::ago((millis() - s.lastSuccessMs) / 1000) + " ago"

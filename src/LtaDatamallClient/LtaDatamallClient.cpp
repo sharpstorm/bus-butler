@@ -29,9 +29,11 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
   snprintf(url, 60, "%s?BusStopCode=%s", LTA_DATAMALL_BUS_ARRIVAL_API_PATH,
            busStopCode.c_str());
 
+  int httpCode = -1;
   for (int attempt = 1; attempt <= LTA_DATAMALL_MAX_RETRIES; attempt++) {
     if (!httpClient.begin(wifiClient, LTA_DATAMALL_API_HOST, HTTPS_PORT, url,
                           true)) {
+      lastError = -1;
       if (attempt < LTA_DATAMALL_MAX_RETRIES) {
         delay(LTA_DATAMALL_RETRY_DELAY_MS);
         continue;
@@ -39,17 +41,20 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
       return nullptr;
     }
 
-    httpClient.addHeader("Host", LTA_DATAMALL_API_HOST);
-    httpClient.addHeader("Connection", "close");
     httpClient.addHeader("AccountKey", apiKey);
-    httpClient.addHeader("User-Agent", "axios/3.0.5");
+    httpClient.addHeader("Accept", "application/json");
     httpClient.setTimeout(10000);        // 10 second timeout
     httpClient.setConnectTimeout(3000);  // 3 second connection timeout
 
-    int httpCode = httpClient.GET();
+    httpCode = httpClient.GET();
+    lastError = httpCode;
     if (httpCode == 200) {
       break;
     }
+
+    // -1 here is almost always a failed TLS handshake (CA mismatch) or DNS.
+    Serial.printf("DataMall BusArrival %s failed: %d (%s)\n", url, httpCode,
+                  HTTPClient::errorToString(httpCode).c_str());
 
     // Not successful, disconnect and figure out if we should retry
     httpClient.end();
@@ -66,13 +71,16 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
 
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, httpClient.getStream());
+  httpClient.end();  // Body is fully parsed; free the TLS session now
   if (error) {
     Serial.print("JSON deserialization failed: ");
     Serial.println(error.c_str());
+    lastError = -2;
     return nullptr;
   }
 
   if (!doc.is<JsonObject>()) {
+    lastError = -2;
     return nullptr;
   }
 
@@ -96,7 +104,6 @@ unique_ptr<BusArrivalApiResponse> LtaDatamallClient::getBusArrival(
          fromJsonResponse(nextBus2), fromJsonResponse(nextBus3)});
   }
 
-  httpClient.end();
   return resp;
 }
 
@@ -111,18 +118,18 @@ int LtaDatamallClient::fetchJson(const String& pathAndQuery, JsonDocument& doc,
     if (!httpClient.begin(wifiClient, LTA_DATAMALL_API_HOST, HTTPS_PORT,
                           pathAndQuery, true)) {
       httpCode = -1;
+      lastError = -1;
       delay(LTA_DATAMALL_RETRY_DELAY_MS);
       continue;
     }
 
-    httpClient.addHeader("Host", LTA_DATAMALL_API_HOST);
-    httpClient.addHeader("Connection", "close");
     httpClient.addHeader("AccountKey", apiKey);
     httpClient.addHeader("Accept", "application/json");
     httpClient.setTimeout(15000);
     httpClient.setConnectTimeout(5000);
 
     httpCode = httpClient.GET();
+    lastError = httpCode;
     if (httpCode == 200) {
       DeserializationError error =
           filter == nullptr
@@ -133,11 +140,14 @@ int LtaDatamallClient::fetchJson(const String& pathAndQuery, JsonDocument& doc,
       if (error) {
         Serial.printf("DataMall JSON error on %s: %s\n", pathAndQuery.c_str(),
                       error.c_str());
+        lastError = -2;
         return -2;
       }
       return 200;
     }
 
+    Serial.printf("DataMall %s failed: %d (%s)\n", pathAndQuery.c_str(),
+                  httpCode, HTTPClient::errorToString(httpCode).c_str());
     httpClient.end();
     if (httpCode >= 400 && httpCode < 500) {
       return httpCode;  // Bad key or bad request: retrying won't help
