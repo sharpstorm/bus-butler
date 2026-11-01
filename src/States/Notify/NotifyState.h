@@ -61,6 +61,10 @@ class NotifyState : public IAppState {
   void renderCard();
   void renderPicture();
   void renderButton(const Button& b);
+  // A label pill (badge, "Updating"); align right puts its right edge at x.
+  void renderPill(int16_t x, int16_t y, const String& text, uint16_t dot,
+                  bool alignRight);
+  void renderBadge();
   void layoutColumn(int16_t x, int16_t w, int16_t bottom);
   void layoutRow(int16_t x, int16_t w, int16_t y, int16_t h);
   bool barGeometry(int16_t& x, int16_t& y, int16_t& w);

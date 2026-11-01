@@ -37,7 +37,7 @@ void NotifyStore::lock() {
 
 void NotifyStore::unlock() { xSemaphoreGiveRecursive(storeMutex); }
 
-void NotifyStore::upsert(Notification n) {
+void NotifyStore::upsert(Notification n, bool keepTimer) {
   lock();
   uint32_t now = millis();
   n.deadlineMs = 0;
@@ -56,6 +56,8 @@ void NotifyStore::upsert(Notification n) {
     n.createdMs = old.createdMs;
     n.seq = old.style == n.style ? old.seq : nextSeq++;
     n.revision = old.revision + 1;
+    n.imageRevision = old.imageRevision + (n.jpeg != old.jpeg ? 1 : 0);
+    if (keepTimer && old.style == n.style) n.deadlineMs = old.deadlineMs;
     if (old.style == NotifyStyle::Banner) bannerVersion++;
     old = n;
     replaced = true;
@@ -92,7 +94,8 @@ void NotifyStore::trim(NotifyStyle style, size_t max) {
   }
 }
 
-bool NotifyStore::attachImage(const String& id, uint8_t* data, size_t len) {
+bool NotifyStore::attachImage(const String& id, uint8_t* data, size_t len,
+                              bool keepTimer) {
   shared_ptr<JpegBlob> blob = make_shared<JpegBlob>();
   blob->data = data;
   blob->len = len;
@@ -101,10 +104,16 @@ bool NotifyStore::attachImage(const String& id, uint8_t* data, size_t len) {
   for (Notification& n : items) {
     if (n.id != id) continue;
     n.jpeg = blob;
+    bool wasReady = n.image == NotifyImage::Ready;
     n.image = NotifyImage::Ready;
-    n.revision++;
+    // Only the picture changed, unless the "loading" state ends
+    if (wasReady) {
+      n.imageRevision++;
+    } else {
+      n.revision++;
+    }
     // A picture arriving late still gets its full time on screen.
-    if (n.timeoutMs > 0 && n.style != NotifyStyle::Toast) {
+    if (!keepTimer && n.timeoutMs > 0 && n.style != NotifyStyle::Toast) {
       n.deadlineMs = millis() + n.timeoutMs;
       if (n.deadlineMs == 0) n.deadlineMs = 1;
     }

@@ -33,6 +33,7 @@ enum class ActionState : uint8_t { Idle, Running, Ok, Failed };
 #define NOTIFY_BODY_MAX 300
 #define NOTIFY_MAX_ACTIONS 3
 #define NOTIFY_ACTION_LABEL_MAX 16
+#define NOTIFY_BADGE_MAX 12
 #define NOTIFY_URL_MAX 300
 #define NOTIFY_MAX_IMAGE_BYTES (160 * 1024)
 
@@ -50,6 +51,7 @@ struct NotifyAction {
   String url;     // http:// only, called by the device when tapped
   String method;  // GET or POST
   String icon;    // optional icon name
+  String accent;  // optional colour name; else the notification's
   ActionState state = ActionState::Idle;
 };
 
@@ -68,6 +70,10 @@ struct Notification {
   String icon;    // icon name, see notifyIconGlyph()
   String accent;  // colour name, see notifyAccent()
   String source;  // small caption, e.g. "Sanctuary"
+  // Short status label shown on the picture (or the card): "LIVE", "REC",
+  // "2/5"... Empty for none.
+  String badge;
+  String badgeAccent;
   uint8_t priority = 1;      // 0 low .. 3 urgent
   uint32_t timeoutMs = 0;    // 0 = until dismissed
   uint32_t deadlineMs = 0;   // millis() when it goes (0 = never)
@@ -78,6 +84,10 @@ struct Notification {
   uint32_t createdMs = 0;
   uint32_t seq = 0;       // arrival order
   uint32_t revision = 0;  // changes on every update of this notification
+  // Changes when only the picture changed (PUT /api/notify/image). Kept
+  // apart from revision so a stream of pictures (a live view, a progress
+  // image) redraws just the picture and doesn't disturb button states.
+  uint32_t imageRevision = 0;
 };
 
 const char* notifyStyleName(NotifyStyle style);

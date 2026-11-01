@@ -90,9 +90,14 @@ curl -X DELETE 'http://busbutler.local/api/notify?id=door' -H "Authorization: Be
 | `timeout` | Seconds. Full 60, toast 6 (1-30), banner 0 (until dismissed) |
 | `wake` | Wake the screen. Default `true` for full, `false` otherwise |
 | `image` | Full only: `pending` (picture area says loading; on an update it keeps the current picture with an "Updating" badge), `unavailable`, `none`. If left out, an update keeps the current picture |
-| `actions` | Up to 3 `{"label", "url", "method"}` buttons (`http://` only, `GET` or `POST`). The screen calls the URL when tapped and shows ... / Done / Failed. Toasts don't show buttons |
+| `badge`, `badgeAccent` | A short label (up to 12 characters) in a pill on the picture, or at the top right of the card: `LIVE`, `REC`, `2/5`. On a banner it replaces the right-hand label |
+| `merge` | `true`: only the fields you send change, the rest keep their values (e.g. send just `badge` and `actions`). Without it, the notification is replaced whole |
+| `timer` | `keep`: don't restart the countdown. Default `restart` |
+| `actions` | Up to 3 `{"label", "url", "method", "accent"}` buttons (`http://` only, `GET` or `POST`). The screen calls the URL when tapped and shows ... / Done / Failed. Toasts don't show buttons |
 
-Pictures (`PUT /api/notify/image?id=...`) must be baseline (not progressive) JPEGs of at most 160 KB. They show in a 362×272 area, shrunk by ½, ¼ or ⅛ to fit. Send 362×272 or smaller to avoid cropping. `GET /api/notify` lists what is active.
+**Moving pictures.** Send a new picture to the same id as often as about once a second for a view that moves: a camera's live view, a progress image, a slideshow. Only the picture is redrawn, and buttons keep their state (a button pressed mid-stream still shows Done or Failed). Add `&timer=keep` so each picture doesn't restart the countdown. Without it, a late picture gets the notification's full time again.
+
+Pictures (`PUT /api/notify/image?id=...[&timer=keep]`) must be baseline (not progressive) JPEGs of at most 160 KB. They show in a 362×272 area, shrunk by ½, ¼ or ⅛ to fit. Send 362×272 or smaller to avoid cropping. `GET /api/notify` lists what is active.
 
 Notifications are kept in memory only, so a restart clears them. The token stops blind pushes, but the portal itself has no password: anyone who can open the portal can also set a new token.
 

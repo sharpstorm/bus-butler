@@ -95,52 +95,88 @@ static String clip(const String& s, size_t max) {
   return s.substring(0, end);
 }
 
+// Sets out from a string field if the request has it.
+static bool take(JsonVariant body, const char* key, String& out, size_t max) {
+  if (body[key].isNull()) return false;
+  out = clip(body[key] | "", max);
+  return true;
+}
+
 // Builds a notification from JSON. Returns an error message, or "" if fine.
-static String parse(JsonVariant body, Notification& n) {
+// With "merge": true, fields the request leaves out keep their current
+// values (an update that only changes a badge or the buttons).
+static String parse(JsonVariant body, Notification& n, bool& keepTimer) {
   if (!body.is<JsonObject>()) return "Expected a JSON object";
-  n.id = body["id"] | "";
-  if (!validId(n.id)) {
+  String id = body["id"] | "";
+  if (!validId(id)) {
     return "id must be 1-32 characters: letters, digits, . _ - :";
   }
-  String style = body["style"] | "toast";
-  if (!parseNotifyStyle(style, n.style)) {
-    return "style must be full, banner or toast";
+  Notification old;
+  bool exists = notifyStore.get(id, old);
+  bool merge = (body["merge"] | false) && exists;
+  if (merge) {
+    n = old;
+  } else {
+    n = Notification();
+    n.id = id;
   }
-  n.title = clip(body["title"] | "", NOTIFY_TITLE_MAX);
-  n.body = clip(body["body"] | "", NOTIFY_BODY_MAX);
+  String timer = body["timer"] | "restart";
+  if (timer != "restart" && timer != "keep") return "timer must be keep or restart";
+  keepTimer = timer == "keep";
+
+  if (!body["style"].isNull() || !merge) {
+    String style = body["style"] | "toast";
+    if (!parseNotifyStyle(style, n.style)) {
+      return "style must be full, banner or toast";
+    }
+  }
+  bool styleChanged = exists && old.style != n.style;
+  take(body, "title", n.title, NOTIFY_TITLE_MAX);
+  take(body, "body", n.body, NOTIFY_BODY_MAX);
   if (n.title.length() == 0 && n.body.length() == 0) {
     return "Give a title or a body";
   }
-  n.icon = clip(body["icon"] | "", 16);
-  n.accent = clip(body["accent"] | "", 12);
-  n.source = clip(body["source"] | "", 24);
-  n.priority = constrain(body["priority"] | 1, 0, 3);
-
-  int defaultTimeout = n.style == NotifyStyle::Full    ? NOTIFY_FULL_TIMEOUT_S
-                       : n.style == NotifyStyle::Toast ? NOTIFY_TOAST_TIMEOUT_S
-                                                       : 0;
-  long timeout = body["timeout"] | (long)defaultTimeout;
-  if (n.style == NotifyStyle::Toast) {
-    timeout = constrain(timeout, 1L, 30L);
-  } else {
-    timeout = constrain(timeout, 0L, 86400L);
+  take(body, "icon", n.icon, 16);
+  take(body, "accent", n.accent, 12);
+  take(body, "source", n.source, 24);
+  take(body, "badge", n.badge, NOTIFY_BADGE_MAX);
+  take(body, "badgeAccent", n.badgeAccent, 12);
+  if (!body["priority"].isNull() || !merge) {
+    n.priority = constrain(body["priority"] | 1, 0, 3);
   }
-  n.timeoutMs = (uint32_t)timeout * 1000;
-  n.wake = body["wake"] | (n.style == NotifyStyle::Full);
+
+  if (!body["timeout"].isNull() || !merge || styleChanged) {
+    int defaultTimeout = n.style == NotifyStyle::Full    ? NOTIFY_FULL_TIMEOUT_S
+                         : n.style == NotifyStyle::Toast ? NOTIFY_TOAST_TIMEOUT_S
+                                                         : 0;
+    long timeout = body["timeout"] | (long)defaultTimeout;
+    if (n.style == NotifyStyle::Toast) {
+      timeout = constrain(timeout, 1L, 30L);
+    } else {
+      timeout = constrain(timeout, 0L, 86400L);
+    }
+    n.timeoutMs = (uint32_t)timeout * 1000;
+  }
+  if (!body["wake"].isNull() || !merge) {
+    n.wake = body["wake"] | (n.style == NotifyStyle::Full);
+  }
 
   String image = body["image"] | "";
   if (n.style != NotifyStyle::Full) {
     n.image = NotifyImage::None;
+    n.jpeg.reset();
   } else if (image == "pending") {
     n.image = NotifyImage::Pending;
+    if (exists) n.jpeg = old.jpeg;  // shown with "Updating" meanwhile
   } else if (image == "unavailable") {
     n.image = NotifyImage::Unavailable;
+    n.jpeg.reset();
   } else if (image == "none") {
     n.image = NotifyImage::None;
+    n.jpeg.reset();
   } else if (image.length() == 0) {
     // An update that doesn't mention the picture keeps it
-    Notification old;
-    if (notifyStore.get(n.id, old) && old.style == NotifyStyle::Full) {
+    if (exists && old.style == NotifyStyle::Full) {
       n.image = old.image;
       n.jpeg = old.jpeg;
     }
@@ -148,24 +184,28 @@ static String parse(JsonVariant body, Notification& n) {
     return "image must be pending, none or unavailable";
   }
 
-  JsonArray actions = body["actions"].as<JsonArray>();
-  for (JsonObject a : actions) {
-    if (n.actions.size() >= NOTIFY_MAX_ACTIONS) break;
-    NotifyAction action;
-    action.label = clip(a["label"] | "", NOTIFY_ACTION_LABEL_MAX);
-    action.url = a["url"] | "";
-    action.method = a["method"] | "POST";
-    action.method.toUpperCase();
-    action.icon = clip(a["icon"] | "", 16);
-    if (action.label.length() == 0) return "Every action needs a label";
-    if (!action.url.startsWith("http://") ||
-        action.url.length() > NOTIFY_URL_MAX) {
-      return "Action urls must be http:// and at most 300 characters";
+  if (!body["actions"].isNull() || !merge) {
+    n.actions.clear();
+    JsonArray actions = body["actions"].as<JsonArray>();
+    for (JsonObject a : actions) {
+      if (n.actions.size() >= NOTIFY_MAX_ACTIONS) break;
+      NotifyAction action;
+      action.label = clip(a["label"] | "", NOTIFY_ACTION_LABEL_MAX);
+      action.url = a["url"] | "";
+      action.method = a["method"] | "POST";
+      action.method.toUpperCase();
+      action.icon = clip(a["icon"] | "", 16);
+      action.accent = clip(a["accent"] | "", 12);
+      if (action.label.length() == 0) return "Every action needs a label";
+      if (!action.url.startsWith("http://") ||
+          action.url.length() > NOTIFY_URL_MAX) {
+        return "Action urls must be http:// and at most 300 characters";
+      }
+      if (action.method != "GET" && action.method != "POST") {
+        return "Action method must be GET or POST";
+      }
+      n.actions.push_back(action);
     }
-    if (action.method != "GET" && action.method != "POST") {
-      return "Action method must be GET or POST";
-    }
-    n.actions.push_back(action);
   }
   return "";
 }
@@ -173,12 +213,13 @@ static String parse(JsonVariant body, Notification& n) {
 static void handlePush(AsyncWebServerRequest* request, JsonVariant& body) {
   if (!authorize(request)) return;
   Notification n;
-  String error = parse(body, n);
+  bool keepTimer = false;
+  String error = parse(body, n, keepTimer);
   if (error.length()) {
     sendError(request, 400, error.c_str());
     return;
   }
-  notifyStore.upsert(n);
+  notifyStore.upsert(n, keepTimer);
   JsonDocument doc;
   doc["ok"] = true;
   doc["id"] = n.id;
@@ -248,9 +289,12 @@ static void imageRequest(AsyncWebServerRequest* request) {
     sendError(request, 400, "Add ?id=<notification id>");
     return;
   }
+  const AsyncWebParameter* timer = request->getParam("timer");
+  bool keepTimer = timer != nullptr && timer->value() == "keep";
   uint8_t* data = (uint8_t*)request->_tempObject;
   request->_tempObject = nullptr;  // the store owns it now
-  if (!notifyStore.attachImage(id->value(), data, request->contentLength())) {
+  if (!notifyStore.attachImage(id->value(), data, request->contentLength(),
+                               keepTimer)) {
     sendError(request, 404, "No notification with that id");
     return;
   }
@@ -302,6 +346,8 @@ static void handleList(AsyncWebServerRequest* request) {
     o["image"] = imageName(n.image);
     o["age"] = (now - n.createdMs) / 1000;
     if (n.deadlineMs) o["expiresIn"] = (int32_t)(n.deadlineMs - now) / 1000;
+    if (n.badge.length()) o["badge"] = n.badge;
+    o["imageRevision"] = n.imageRevision;
   }
   response->setLength();
   request->send(response);

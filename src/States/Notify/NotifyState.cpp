@@ -60,6 +60,7 @@ void NotifyState::applyBoost() {
 // Same text, picture and button states: nothing to redraw.
 bool NotifyState::sameLook(const Notification& n) {
   if (n.revision != current.revision) return false;
+  if (n.imageRevision != current.imageRevision) return false;
   for (size_t i = 0; i < n.actions.size() && i < current.actions.size(); i++) {
     if (n.actions[i].state != current.actions[i].state) return false;
   }
@@ -72,9 +73,15 @@ void NotifyState::loop() {
     Notification fresh;
     // Removal is NotifyUi's business (it closes or switches the overlay)
     if (notifyStore.get(current.id, fresh) && !sameLook(fresh)) {
-      bool onlyButtons = fresh.revision == current.revision;
+      bool sameRevision = fresh.revision == current.revision;
+      bool newPicture = fresh.imageRevision != current.imageRevision;
       current = fresh;
-      if (onlyButtons) {
+      if (sameRevision) {
+        // A new picture (e.g. one frame of a live view) and/or a button's
+        // state: redraw only those, so a stream of pictures stays cheap.
+        if (newPicture && !detail && current.image != NotifyImage::None) {
+          renderPicture();
+        }
         for (const Button& b : buttons) renderButton(b);
         anim::present();
       } else {
@@ -135,10 +142,9 @@ void NotifyState::renderPicture() {
                             picture.w, picture.h);
     if (current.image == NotifyImage::Pending) {
       // An update is on its way; keep showing the last one
-      gfx->fillRoundRect(8, 8, 92, 24, 12, BG_PANEL);
-      ui::text(&IconSm, ICON_REFRESH, 16, 26, NEON_CYAN);
-      ui::text(&FigSm, "Updating", 34, 25, TEXT_MAIN);
+      renderPill(NOTIFY_PIC_W - 8, 8, "Updating", NEON_CYAN, true);
     }
+    renderBadge();
     return;
   }
 
@@ -150,6 +156,32 @@ void NotifyState::renderPicture() {
   ui::textMid(&FigMed, line, cx, cy + 30, GRAY_LIGHT);
   if (pictureError.length() && current.jpeg != nullptr) {
     ui::textMid(&FigSm, pictureError, cx, cy + 52, GRAY_MID);
+  }
+  renderBadge();
+}
+
+void NotifyState::renderPill(int16_t x, int16_t y, const String& text,
+                             uint16_t dot, bool alignRight) {
+  const int16_t h = 24;
+  int16_t w = ui::width(&SgSm, text) + 34;
+  if (alignRight) x -= w;
+  gfx->fillRoundRect(x, y, w, h, h / 2, BG_PANEL);
+  gfx->drawRoundRect(x, y, w, h, h / 2, dot);
+  gfx->fillCircle(x + 13, y + h / 2, 4, dot);
+  ui::text(&SgSm, text, x + 23, y + 17, TEXT_MAIN);
+}
+
+// The notification's badge: top left of the picture, or top right of the
+// card when there is no picture.
+void NotifyState::renderBadge() {
+  if (current.badge.length() == 0) return;
+  uint16_t color = current.badgeAccent.length()
+                       ? notifyAccent(current.badgeAccent, "")
+                       : notifyAccent(current.accent, current.icon);
+  if (!detail && current.image != NotifyImage::None) {
+    renderPill(8, 8, current.badge, color, false);
+  } else {
+    renderPill(CARD_X + CARD_W - 14, CARD_Y + 12, current.badge, color, true);
   }
 }
 
@@ -199,7 +231,10 @@ void NotifyState::renderCard() {
               CARD_Y + 52, accent);
 
   int16_t y = CARD_Y + 40;
-  vector<String> title = ui::wrap(&SgBig, current.title, textW, 2);
+  // Leave room for the badge in the card's top right
+  int16_t titleW = textW;
+  if (current.badge.length()) titleW -= ui::width(&SgSm, current.badge) + 34 + 8;
+  vector<String> title = ui::wrap(&SgBig, current.title, titleW, 2);
   for (const String& line : title) {
     ui::text(&SgBig, line, textX, y, TEXT_MAIN);
     y += 30;
@@ -222,6 +257,7 @@ void NotifyState::renderCard() {
 
   layoutRow(CARD_X, CARD_W, ROW_Y, ROW_H);
   for (const Button& b : buttons) renderButton(b);
+  renderBadge();
 }
 
 // Buttons stacked bottom-up in the side panel: Close last.
@@ -248,8 +284,10 @@ void NotifyState::layoutRow(int16_t x, int16_t w, int16_t y, int16_t h) {
 }
 
 void NotifyState::renderButton(const Button& b) {
-  uint16_t accent = notifyAccent(current.accent, current.icon);
   bool close = b.action < 0;
+  uint16_t accent = !close && current.actions[b.action].accent.length()
+                        ? notifyAccent(current.actions[b.action].accent, "")
+                        : notifyAccent(current.accent, current.icon);
   gfx->fillRoundRect(b.x, b.y, b.w, b.h, 8, close ? BG_CARD : BG_HIGHLIGHT);
   gfx->drawRoundRect(b.x, b.y, b.w, b.h, 8, close ? GRAY_MID : accent);
 

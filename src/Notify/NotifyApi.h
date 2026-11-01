@@ -19,11 +19,22 @@
       "wake": true,                  default true for full, false otherwise
       "image": "pending" | "none" | "unavailable",   full only; omitted keeps
                                      the current picture of an update
-      "actions": [{"label": "Refresh", "url": "http://...", "method": "POST"}]
+      "badge": "LIVE", "badgeAccent": "red",  a label on the picture / card
+      "actions": [{"label": "Refresh", "url": "http://...", "method": "POST",
+                   "accent": "red"}],
+      "merge": true,                 only change the fields given (else a
+                                     replacement: missing fields reset)
+      "timer": "keep"                don't restart the countdown (default
+                                     "restart")
     }
-  PUT    /api/notify/image?id=door   body: a baseline JPEG, <= 160 KB. Shown
+  PUT    /api/notify/image?id=door[&timer=keep]
+                                     body: a baseline JPEG, <= 160 KB. Shown
                                      scaled down by 1/2, 1/4 or 1/8 to fit
-                                     362x272 (the picture area).
+                                     362x272 (the picture area). Send new
+                                     ones as often as ~1/s for a moving view:
+                                     only the picture is redrawn, buttons
+                                     keep their state; timer=keep stops each
+                                     one restarting the countdown.
   DELETE /api/notify?id=door         dismiss (id=* clears everything)
   POST   /api/notify/dismiss?id=door same, for clients without DELETE
   GET    /api/notify                 what's active

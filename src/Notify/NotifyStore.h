@@ -15,11 +15,14 @@
 class NotifyStore {
  public:
   // Adds or replaces (same id) a notification. Replacing keeps an attached
-  // picture unless the new one says otherwise.
-  void upsert(Notification n);
+  // picture unless the new one says otherwise. keepTimer leaves the
+  // countdown of a replaced notification where it was.
+  void upsert(Notification n, bool keepTimer = false);
   // Takes ownership of data (allocated with malloc/ps_malloc). Returns false
-  // if there is no notification with that id.
-  bool attachImage(const String& id, uint8_t* data, size_t len);
+  // if there is no notification with that id. Unless keepTimer, the
+  // countdown starts again (a late picture gets its full time on screen).
+  bool attachImage(const String& id, uint8_t* data, size_t len,
+                   bool keepTimer = false);
   bool remove(const String& id);
   void clear();
   void setActionState(const String& id, uint32_t revision, size_t index,

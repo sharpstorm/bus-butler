@@ -556,7 +556,9 @@ void HomeState::renderNoticeAlert() {
   String title = notice.title.length() ? notice.title : notice.body;
   String detail = notice.title.length() ? notice.body : String("");
   // The right-hand label: how many more, or where it came from
-  String label = noticeCount > 1 ? "+" + String(noticeCount - 1) : notice.source;
+  String label = notice.badge.length() ? notice.badge
+                 : noticeCount > 1     ? "+" + String(noticeCount - 1)
+                                       : notice.source;
   label.toUpperCase();
   label = ui::fit(&SgSm, label, 90);
   int16_t labelW = label.length() ? ui::width(&SgSm, label) + 16 : 0;
